@@ -1,5 +1,69 @@
+const { notifyUser } = require("./notifyUser")
+const { mic } = require('./mic')
+const { LPD8 } = require('./lpd8')
+
 const path = require('path')
-const { app, BrowserWindow, Tray, systemPreferences } = require('electron')
+const { app, BrowserWindow, Tray, globalShortcut, Menu } = require('electron')
+
+const trayMenu = Menu.buildFromTemplate([{
+  label: 'Quit',
+  click: () => app.quit()
+}])
+
+const iconLivePath = path.join(__dirname, 'images', 'live_22.png')
+const iconLiveInvPath = path.join(__dirname, 'images', 'live-inv_22.png')
+const iconMicMutedPath = path.join(__dirname, 'images', 'mic-mute_22.png')
+const iconBallonLivePath = path.join(__dirname, 'images', 'on-air.png')
+const iconBallonMicMutedPath = path.join(__dirname, 'images', 'mic-muted.png')
+
+const PAD_MUTE = 48
+
+let lpd8 = new LPD8('LPD8')
+let padMute = lpd8.pad(PAD_MUTE)
+let muted = false
+let iconBlinkStatus = 0
+let iconBlinkTimeout
+let tray
+
+padMute.whenOn(mute)
+padMute.whenOff(unmute)
+
+function mute() {
+  muted = true
+  mic.mute()
+    .then(() => notifyUser("Mic is MUTED", 'Handle MIDI command', iconBallonMicMutedPath))
+    .then(() => {
+      tray.setImage(iconMicMutedPath)
+      clearInterval(iconBlinkTimeout)
+    })
+    .then(padMute.setOn)
+}
+
+function unmute() {
+  muted = false
+  mic.unmute()
+    .then(() => notifyUser("Mic is UNMUTED", 'Handle MIDI command', iconBallonLivePath))
+    .then(() => {
+      iconBlinkStatus = 0
+      tray.setImage(iconLivePath)
+
+      iconBlinkTimeout = setInterval(() => {
+        if (iconBlinkStatus) {
+          tray.setImage(iconLivePath) 
+          iconBlinkStatus = 0
+        } else {
+          tray.setImage(iconLiveInvPath)
+          iconBlinkStatus = 1
+        }
+      }, 1000)
+    })
+    .then(padMute.setOff)
+}
+
+function toggleMute() {
+  if (muted) unmute()      
+  else mute()
+}
 
 function createWindow() {
   // Create the browser window.
@@ -15,7 +79,7 @@ function createWindow() {
   win.loadFile('index.html')
 }
 
-app.whenReady().then(createWindow)
+//app.whenReady().then(createWindow)
 
 // Quit when all windows are closed.
 app.on('window-all-closed', () => {
@@ -30,95 +94,30 @@ app.on('activate', () => {
   // On macOS it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow()
+//    createWindow()
   }
 })
 
-let tray = null
 app.on('ready', () => {
-  const iconMicPath = path.join(__dirname, 'images', 'mic_11x16.png')
-  const iconMicMutedPath = path.join(__dirname, 'images', 'mic-muted_16x16.png')
-  tray = new Tray(iconMicPath)
-
+  tray = new Tray(iconMicMutedPath)
   tray.setToolTip('MIDI listener')
-//  tray.setContextMenu(contextMenu)
 
-  tray.on("click", () => {
-    tray.setImage(iconMicMutedPath)
+  tray.on('click', args => {
+    if (args.altKey) {
+      tray.popUpContextMenu(trayMenu)
+    } else {
+      toggleMute()
+    }
   })
 })
 
-// app.on('ready', async () => {
-//   let value = await systemPreferences.askForMediaAccess("microphone")
-//   console.log(value ? "ALLOWED" : "DENIED")
-// })
-const execa = require('execa')
-const easymidi = require('easymidi');
-const input = new easymidi.Input('LPD8');
-const output = new easymidi.Output('LPD8');
+app.on('ready', () => {
+  mic.getVolume().then(volume => {
+    if (volume > 0) unmute()
+    else mute()
+  })
+})
 
-const PAD_MUTE = 48;
-
-const DEFAULT_VOLUME = 50;
-var volume = 0;
-
-function start() {
-  input.on('noteon', onNoteOn);
-  input.on('noteoff', onNoteOff);
-}
-
-// msg: { channel: 0, note: 44, velocity: 50, _type: 'noteon' }
-function onNoteOn(msg) {
-  //console.log(msg);
-
-  switch(msg.note) {
-    case PAD_MUTE: muteMic().then(_ => notifyUser("Mic is MUTED", 'Handle MIDI command')); break;
-  }
-}
-
-function onNoteOff(msg) {
-  switch(msg.note) {
-    case PAD_MUTE: unmuteMic().then(_ => notifyUser("Mic is UNMUTED", 'Handle MIDI command')); break;
-  }
-}
-
-function muteMic() {
-  return getVolume().then(vol => { 
-    volume = vol;
-    return setVolume(0);
-  });
-}
-
-function unmuteMic() {
-  return setVolume(volume > 0 ? volume : DEFAULT_VOLUME);
-}
-
-function setVolume(val) {
-  return osascript('set volume input volume ' + val);
-}
-
-function getVolume() {
-  return osascript('input volume of (get volume settings)').then(vol => parseInt(vol));
-}
-
-function notifyUser(subtitle, text) {
-  return osascript('display notification "' + text + '" with title "MIDI listener app"' + (!!subtitle ? ' subtitle "' + subtitle + '"' : ''));
-}
-
-function osascript(cmd) {
-  return execa('osascript', ['-e', cmd]).then(result => result.stdout);
-}
-
-app.on('ready', async () => {
-  let vol = await getVolume()
-  if (!(vol>=0)) throw Error("Can't get volume settings!");
-  
-  volume = vol;
-  
-  if (volume > 0) output.send('noteoff', { note: PAD_MUTE, channel: 0, velocity: 127 });
-  else output.send('noteon', { note: PAD_MUTE, channel: 0, velocity: 127 });
-  
-  start();
-  
-  notifyUser('Mic is ' + (volume > 0? 'UN' : '') + 'MUTED', 'Just started');
+app.on('ready', () => {
+  globalShortcut.register('Command+Shift+A', toggleMute)
 })

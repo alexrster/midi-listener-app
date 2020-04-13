@@ -1,13 +1,24 @@
 {
-  "name": "midi-listener-app",
+  "name": "midilistener.app",
   "version": "0.1.0",
   "description": "MIDI listener app for Mac OS X",
+  "main": "src/main.js",
   "scripts": {
     "start": "electron src/main.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "build": {
+    "appId": "zone.qx.midilistener.app",
+    "productName": "MIDI listener"
   },
   "keywords": [
     "midi",
+    "mic",
+    "tray",
+    "electron",
     "mac"
   ],
   "author": "AY <a@qx.zone>",
@@ -15,10 +26,12 @@
   "git": "https://github.com/alexrster/midi-listener-app",
   "devDependencies": {
     "electron": "^8.2.1",
+    "electron-builder": "^22.4.1",
     "electron-rebuild": "^1.10.1"
   },
   "dependencies": {
     "easymidi": "^1.0.3",
+    "events": "^3.1.0",
     "execa": "^4.0.0"
   }
 }
