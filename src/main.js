@@ -1,9 +1,10 @@
+const path = require('path')
+const { app, Tray, globalShortcut, Menu } = require('electron')
+
 const { notifyUser } = require("./notifyUser")
 const { mic } = require('./mic')
 const { LPD8 } = require('./lpd8')
-
-const path = require('path')
-const { app, BrowserWindow, Tray, globalShortcut, Menu } = require('electron')
+const { TrayIcon, TrayBlinkingIcon } = require('./trayIcon')
 
 const trayMenu = Menu.buildFromTemplate([{
   label: 'Quit',
@@ -16,87 +17,44 @@ const iconMicMutedPath = path.join(__dirname, 'images', 'mic-mute_22.png')
 const iconBallonLivePath = path.join(__dirname, 'images', 'on-air.png')
 const iconBallonMicMutedPath = path.join(__dirname, 'images', 'mic-muted.png')
 
-const PAD_MUTE = 48
+const iconMuted = new TrayIcon(iconMicMutedPath)
+const iconLive = new TrayBlinkingIcon(iconLivePath, iconLiveInvPath)
 
 let lpd8 = new LPD8('LPD8')
-let padMute = lpd8.pad(PAD_MUTE)
-let muted = false
-let iconBlinkStatus = 0
-let iconBlinkTimeout
+let padMute = lpd8.getPad('PAD 5')
+let knobVol = lpd8.getKnob('K1')
 let tray
 
-padMute.whenOn(mute)
-padMute.whenOff(unmute)
+padMute.onOn(() => mute())
+padMute.onOff(() => unmute())
+knobVol.onChange(val => mic.setDesiredVolume(val))
+
+mic.onMuted(() => onMuted())
+mic.onUnmuted(() => onUnmuted())
+
+function onMuted(notify = true) {
+  tray.setIcon(iconMuted)
+  padMute.setOn()
+  if (notify) notifyUser("Mic is MUTED", 'Handle MIDI command', iconBallonMicMutedPath)
+}
+
+function onUnmuted(notify = true) {
+  tray.setIcon(iconLive)
+  padMute.setBlinking()
+  if (notify) notifyUser("Mic is UNMUTED", 'Handle MIDI command', iconBallonLivePath)
+}
 
 function mute() {
-  muted = true
-  mic.mute()
-    .then(() => notifyUser("Mic is MUTED", 'Handle MIDI command', iconBallonMicMutedPath))
-    .then(() => {
-      tray.setImage(iconMicMutedPath)
-      clearInterval(iconBlinkTimeout)
-    })
-    .then(padMute.setOn)
+  return mic.mute()
 }
 
 function unmute() {
-  muted = false
-  mic.unmute()
-    .then(() => notifyUser("Mic is UNMUTED", 'Handle MIDI command', iconBallonLivePath))
-    .then(() => {
-      iconBlinkStatus = 0
-      tray.setImage(iconLivePath)
-
-      iconBlinkTimeout = setInterval(() => {
-        if (iconBlinkStatus) {
-          tray.setImage(iconLivePath) 
-          iconBlinkStatus = 0
-        } else {
-          tray.setImage(iconLiveInvPath)
-          iconBlinkStatus = 1
-        }
-      }, 1000)
-    })
-    .then(padMute.setOff)
+  return mic.unmute()
 }
 
 function toggleMute() {
-  if (muted) unmute()      
-  else mute()
+  return mic.isMuted() ? unmute() : mute()
 }
-
-function createWindow() {
-  // Create the browser window.
-  let win = new BrowserWindow({
-    width: 800,
-    height: 600,
-    webPreferences: {
-      nodeIntegration: true
-    }
-  })
-
-  // and load the index.html of the app.
-  win.loadFile('index.html')
-}
-
-//app.whenReady().then(createWindow)
-
-// Quit when all windows are closed.
-app.on('window-all-closed', () => {
-  // On macOS it is common for applications and their menu bar
-  // to stay active until the user quits explicitly with Cmd + Q
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
-
-app.on('activate', () => {
-  // On macOS it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (BrowserWindow.getAllWindows().length === 0) {
-//    createWindow()
-  }
-})
 
 app.on('ready', () => {
   tray = new Tray(iconMicMutedPath)
@@ -111,13 +69,12 @@ app.on('ready', () => {
   })
 })
 
-app.on('ready', () => {
-  mic.getVolume().then(volume => {
-    if (volume > 0) unmute()
-    else mute()
-  })
-})
+app.on('ready', () => mic.isMuted() ? onMuted(false) : onUnmuted(false))
+app.on('ready', () => globalShortcut.register('Command+Shift+A', toggleMute))
 
-app.on('ready', () => {
-  globalShortcut.register('Command+Shift+A', toggleMute)
+app.on('will-quit', args => {
+  if (mic.isMuted()) {
+    args.preventDefault()
+    mic.unmute().then(() => app.quit())
+  }
 })
