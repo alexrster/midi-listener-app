@@ -9,19 +9,21 @@ let desiredVolume = DEFAULT_VOLUME
 let currentVolume
 
 function muteMic() {
-  return setVolume(0);
+  return setVolume(0, false);
 }
 
 function unmuteMic() {
-  return setVolume(desiredVolume);
+  return setVolume(desiredVolume, false);
 }
 
-function setVolume(val) {
+function setVolume(val, notify = true) {
   if (val == currentVolume) return
 
   var pastVolume = currentVolume
   currentVolume = val
-  return osascript('set volume input volume ' + val).then(() => notifyMuteChanged(pastVolume, val));
+  return osascript('set volume input volume ' + val)
+    .then(() => notifyMuteChanged(pastVolume, val))
+    .then(() => { if (notify) eventEmitter.emit('volume-changed', val) });
 }
 
 function notifyMuteChanged(pastVolume, val) {
@@ -58,7 +60,9 @@ exports.mic = {
   mute: muteMic,
   unmute: unmuteMic,
   isMuted: isMuted,
+  getVolume: function() { return currentVolume },
   setDesiredVolume: setDesiredVolume,
   onMuted: function(listener) { return eventEmitter.on('muted', listener) },
-  onUnmuted: function(listener) { return eventEmitter.on('unmuted', listener) }
+  onUnmuted: function(listener) { return eventEmitter.on('unmuted', listener) },
+  onVolumeChanged: function(listener) { return eventEmitter.on('volume-changed', listener) }
 }

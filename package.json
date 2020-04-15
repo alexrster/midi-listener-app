@@ -12,7 +12,10 @@
   },
   "build": {
     "appId": "zone.qx.midilistener.app",
-    "productName": "MIDI listener"
+    "productName": "MIDI listener",
+    "mac": {
+      "category": "public.app-category.productivity"
+    }
   },
   "keywords": [
     "midi",
@@ -31,6 +34,7 @@
   },
   "dependencies": {
     "easymidi": "^1.0.3",
+    "electron-settings": "^3.2.0",
     "events": "^3.1.0",
     "execa": "^4.0.0"
   }

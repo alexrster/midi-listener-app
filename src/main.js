@@ -1,15 +1,11 @@
 const path = require('path')
-const { app, Tray, globalShortcut, Menu } = require('electron')
+const { app, Tray, globalShortcut, Menu, MenuItem } = require('electron')
+const settings = require('electron-settings');
 
 const { notifyUser } = require("./notifyUser")
 const { mic } = require('./mic')
 const { LPD8 } = require('./lpd8')
 const { TrayIcon, TrayBlinkingIcon } = require('./trayIcon')
-
-const trayMenu = Menu.buildFromTemplate([{
-  label: 'Quit',
-  click: () => app.quit()
-}])
 
 const iconLivePath = path.join(__dirname, 'images', 'live_22.png')
 const iconLiveInvPath = path.join(__dirname, 'images', 'live-inv_22.png')
@@ -20,28 +16,36 @@ const iconBallonMicMutedPath = path.join(__dirname, 'images', 'mic-muted.png')
 const iconMuted = new TrayIcon(iconMicMutedPath)
 const iconLive = new TrayBlinkingIcon(iconLivePath, iconLiveInvPath)
 
-let lpd8 = new LPD8('LPD8')
-let padMute = lpd8.getPad('PAD 5')
-let knobVol = lpd8.getKnob('K1')
-let tray
+const lpd8 = new LPD8('LPD8')
+const padMute = lpd8.getPad('PAD 5')
+const knobVol = lpd8.getKnob('K1')
 
-padMute.onOn(() => mute())
-padMute.onOff(() => unmute())
-knobVol.onChange(val => mic.setDesiredVolume(val))
+let tray
+let notifications = true, midi = true
+let trayMenu
+
+padMute.onOn(() => { if (midi) mute() })
+padMute.onOff(() => { if (midi) unmute() })
+knobVol.onChange(val => { if (midi) mic.setDesiredVolume(val) })
 
 mic.onMuted(() => onMuted())
 mic.onUnmuted(() => onUnmuted())
+mic.onVolumeChanged(vol => onVolumeChanged(vol))
 
-function onMuted(notify = true) {
+function onMuted() {
   tray.setIcon(iconMuted)
-  padMute.setOn()
-  if (notify) notifyUser("Mic is MUTED", 'Handle MIDI command', iconBallonMicMutedPath)
+  if (midi) padMute.setOn()
+  if (notifications) notifyUser("Mic is MUTED", 'Handle MIDI command', iconBallonMicMutedPath)
 }
 
-function onUnmuted(notify = true) {
+function onUnmuted() {
   tray.setIcon(iconLive)
-  padMute.setBlinking()
-  if (notify) notifyUser("Mic is UNMUTED", 'Handle MIDI command', iconBallonLivePath)
+  if (midi) padMute.setBlinking()
+  if (notifications) notifyUser("Mic is UNMUTED", 'Handle MIDI command', iconBallonLivePath)
+}
+
+function onVolumeChanged(vol) {
+  if (notifications) notifyUser("Mic Volume " + vol, 'Handle MIDI command', iconBallonLivePath)
 }
 
 function mute() {
@@ -56,9 +60,58 @@ function toggleMute() {
   return mic.isMuted() ? unmute() : mute()
 }
 
+function saveSettings() {
+  settings.set('notifications', notifications)
+  settings.set('midi', midi)
+}
+
+app.on('ready', () => {
+  notifications = settings.get('notifications', true)
+  midi = settings.get('midi', true)
+
+  trayMenu = Menu.buildFromTemplate([
+    {
+      label: 'Mic Volume: NA',
+      enabled: false
+    },
+    {
+      type: 'separator'
+    },
+    {
+      type: 'checkbox',
+      label: 'Disable Notifications',
+      checked: !notifications,
+      click: sender => {
+        notifications = !sender.checked
+        saveSettings()
+      }
+    },
+    {
+      type: 'checkbox',
+      label: 'Disable MIDI',
+      checked: !midi,
+      click: sender => {
+        midi = !sender.checked
+        if (midi) {
+          if (mic.isMuted()) padMute.setOn()
+          else padMute.setBlinking()
+        }
+        else padMute.setOff()
+        saveSettings()
+      }
+    },
+    {
+      type: 'separator'
+    },
+    {
+      label: 'Quit',
+      click: () => app.quit()
+    }
+  ])
+})
+
 app.on('ready', () => {
   tray = new Tray(iconMicMutedPath)
-  tray.setToolTip('MIDI listener')
 
   tray.on('click', args => {
     if (args.altKey) {
@@ -69,7 +122,8 @@ app.on('ready', () => {
   })
 })
 
-app.on('ready', () => mic.isMuted() ? onMuted(false) : onUnmuted(false))
+app.on('ready', () => mic.isMuted() ? onMuted() : onUnmuted())
+app.on('ready', () => onVolumeChanged())
 app.on('ready', () => globalShortcut.register('Command+Shift+A', toggleMute))
 
 app.on('will-quit', args => {
@@ -78,3 +132,5 @@ app.on('will-quit', args => {
     mic.unmute().then(() => app.quit())
   }
 })
+
+app.dock.hide()
