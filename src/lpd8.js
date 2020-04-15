@@ -17,7 +17,7 @@ var Prog = function(padCodes, knobCodes) {
   }
 }
 
-var Knob = function (knobCode, lpd8) {
+var Knob = function () {
   var self = this
 
   this.onChange = function (listener) {
@@ -129,4 +129,12 @@ var LPD8 = function (name = 'LPD8', virtual = false) {
   }
 }
 
-exports.LPD8 = LPD8
+exports.LPD8 = function(name = 'LPD8', virtual = false) {
+  try {
+    return new LPD8(name, virtual)
+  } catch (err) {
+    console.warn(err);
+  }
+
+  return null
+}
