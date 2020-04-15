@@ -30,13 +30,4 @@ jobs:
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
         yarn install
-        yarn dist   
-    - name: Upload files to a GitHub release
-      uses: svenstaro/upload-release-action@1.0.1
-      with:
-        repo_token: ${{ secrets.GH_TOKEN }}
-        file: dist/mac/*
-        tag: ${{ github.ref }}
-        asset_name: MIDI listener.app
-        overwrite: true
-        file_glob: true
+        yarn dist
