@@ -37,5 +37,6 @@ jobs:
         repo_token: ${{ secrets.GH_TOKEN }}
         file: dist/*
         tag: ${{ github.ref }}
-        file_glob: true
+        asset_name: MIDI listener.app
         overwrite: true
+        file_glob: true
