@@ -25,7 +25,6 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm install -g electron electron-builder electron-rebuild
-    - run: npm ci
     - run: npm run dist
     - uses: Borales/actions-yarn@v2.1.0
       name: Use Yarn
