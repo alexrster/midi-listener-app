@@ -73,22 +73,17 @@ function saveSettings() {
   settings.set('notificationSettings', notifications)
 }
 
-function startMidi () {
-  let lpd8 = LPD8('LPD8')
-  if (!lpd8) return
+function MidiConfig(lpd8) {
+  this.lpd8 = lpd8
+  this.padMute = lpd8.getPad('PAD5')
+  this.knobVol = lpd8.getKnob('K1')
 
-  midi = {
-    lpd8: lpd8,
-    padMute: lpd8.getPad('PAD5'),
-    knobVol: lpd8.getKnob('K1')
-  }
-
-  midi.padMute.onOn(() => { if (notifications.midi) mute() })
-  midi.padMute.onOff(() => { if (notifications.midi) unmute() })
-  midi.knobVol.onChange(val => { if (notifications.midi) mic.setDesiredVolume(val) })
+  this.padMute.onOn(() => { if (notifications.midi) mute() })
+  this.padMute.onOff(() => { if (notifications.midi) unmute() })
+  this.knobVol.onChange(val => { if (notifications.midi) mic.setDesiredVolume(val) })
 }
 
-app.on('ready', () => startMidi())
+app.on('ready', () => midi = new MidiConfig(LPD8('LPD8')))
 
 app.on('ready', () => {
   notifications = settings.get('notificationSettings', notifications)
@@ -164,4 +159,4 @@ app.on('will-quit', args => {
   }
 })
 
-app.dock.hide()
+if (app.isPackaged) app.dock.hide()

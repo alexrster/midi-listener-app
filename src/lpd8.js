@@ -52,6 +52,7 @@ var Pad = function (padCode, lpd8) {
   }
 
   this.setBlinking = function (initial = false, interval = 667, velocity = 127) {
+    resetBlinking()
     set(initial, velocity)
     blinkingHandle = setInterval(ctx => set((ctx.state = !ctx.state), velocity), interval, { state: initial })
   }
