@@ -1,6 +1,6 @@
 {
   "name": "midilistener.app",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MIDI listener app for Mac OS X",
   "main": "src/main.js",
   "scripts": {
