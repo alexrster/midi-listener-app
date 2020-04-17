@@ -26,7 +26,6 @@ let notifications = {
 }
 
 let tray
-let trayMenu
 
 mic.onMuted(() => onMuted())
 mic.onUnmuted(() => onUnmuted())
@@ -83,14 +82,29 @@ function MidiConfig(lpd8) {
   this.knobVol.onChange(val => { if (notifications.midi) mic.setDesiredVolume(val) })
 }
 
-app.on('ready', () => midi = new MidiConfig(LPD8('LPD8')))
+function menuOnDisableNotifications(sender) {
+  notifications.popup = !sender.checked
+  saveSettings()
+}
 
-app.on('ready', () => {
-  notifications = settings.get('notificationSettings', notifications)
+function menuOnDisableMidi(sender) {
+  notifications.midi = !sender.checked
+  reloadSettings()
+  saveSettings()
+}
 
-  trayMenu = Menu.buildFromTemplate([
+function menuOnDisableTrayBlinking(sender) {
+  notifications.trayBlinking = !sender.checked
+  reloadSettings()        
+  saveSettings()
+}
+
+function createTrayMenu() {
+  let vol = mic.getVolume()
+  return Menu.buildFromTemplate([
     {
-      label: 'Mic Volume: NA',
+      id: 'micVolumeLbl',
+      label: 'Mic ' + (!!vol ? 'volume: ' + vol : 'is muted'),
       enabled: false
     },
     {
@@ -100,31 +114,20 @@ app.on('ready', () => {
       type: 'checkbox',
       label: 'Disable Notifications',
       checked: !notifications.popup,
-      click: sender => {
-        notifications.popup = !sender.checked
-        saveSettings()
-      }
+      click: menuOnDisableNotifications
     },
     {
       type: 'checkbox',
       label: 'Disable MIDI',
       checked: !notifications.midi || !midi,
       enabled: !!midi,
-      click: sender => {
-        notifications.midi = !sender.checked
-        reloadSettings()
-        saveSettings()
-      }
+      click: menuOnDisableMidi
     },
     {
       type: 'checkbox',
       label: 'Disable Tray Blinking',
       checked: !notifications.trayBlinking,
-      click: sender => {
-        notifications.trayBlinking = !sender.checked
-        reloadSettings()        
-        saveSettings()
-      }
+      click: menuOnDisableTrayBlinking
     },
     {
       type: 'separator'
@@ -134,6 +137,12 @@ app.on('ready', () => {
       click: () => app.quit()
     }
   ])
+}
+
+app.on('ready', () => midi = new MidiConfig(LPD8('LPD8')))
+
+app.on('ready', () => {
+  notifications = settings.get('notificationSettings', notifications)
 })
 
 app.on('ready', () => {
@@ -141,7 +150,7 @@ app.on('ready', () => {
 
   tray.on('click', args => {
     if (args.altKey) {
-      tray.popUpContextMenu(trayMenu)
+      tray.popUpContextMenu(createTrayMenu())
     } else {
       toggleMute()
     }
