@@ -60,8 +60,8 @@ exports.mic = {
   mute: muteMic,
   unmute: unmuteMic,
   isMuted: isMuted,
-  getVolume: function() { return currentVolume },
   setDesiredVolume: setDesiredVolume,
+  getVolume: function() { return currentVolume },
   onMuted: function(listener) { return eventEmitter.on('muted', listener) },
   onUnmuted: function(listener) { return eventEmitter.on('unmuted', listener) },
   onVolumeChanged: function(listener) { return eventEmitter.on('volume-changed', listener) }

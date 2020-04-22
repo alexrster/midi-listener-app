@@ -34,6 +34,9 @@ Tray.prototype.setImage = function(imagePath) {
 }
 
 Tray.prototype.setIcon = function(icon) {
+  if (!!this.currentIcon && this.currentIcon === icon) return
+
+  this.currentIcon = icon
   icon.set(this)
 }
 

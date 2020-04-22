@@ -1,5 +1,5 @@
 const path = require('path')
-const { app, Tray, globalShortcut, Menu, MenuItem } = require('electron')
+const { app, Tray, globalShortcut, Menu } = require('electron')
 const settings = require('electron-settings');
 
 const { notifyUser } = require("./notifyUser")
@@ -18,22 +18,17 @@ const iconTrayMuted = new TrayIcon(iconTrayMutedPath)
 const iconTrayLive = new TrayIcon(iconTrayLivePath)
 const iconTrayLiveBlinking = new TrayBlinkingIcon(iconTrayLivePath, iconTrayLiveInvPath)
 
-let midi = null
+let midi = new MidiConfig()
+let tray = null
 let notifications = {
   popup: true,
   midi: true,
   trayBlinking: true
 }
 
-let tray
-
-mic.onMuted(() => onMuted())
-mic.onUnmuted(() => onUnmuted())
-mic.onVolumeChanged(vol => onVolumeChanged(vol))
-
 function onMuted() {
   tray.setIcon(iconTrayMuted)
-  if (notifications.midi && !!midi) midi.padMute.setOn()
+  if (notifications.midi && midi.isConnected()) midi.setOn()
   if (notifications.popup) notifyUser("Mic is MUTED", 'Handle MIDI command', iconBallonMicMutedPath)
 }
 
@@ -41,7 +36,7 @@ function onUnmuted() {
   if (notifications.trayBlinking) tray.setIcon(iconTrayLiveBlinking)
   else tray.setIcon(iconTrayLive)
 
-  if (notifications.midi && !!midi) midi.padMute.setBlinking()
+  if (notifications.midi && midi.isConnected()) midi.setBlinking()
   if (notifications.popup) notifyUser("Mic is UNMUTED", 'Handle MIDI command', iconBallonLivePath)
 }
 
@@ -62,25 +57,32 @@ function toggleMute() {
 }
 
 function reloadSettings() {
-  if (!!midi && !notifications.midi) midi.padMute.setOff()
-
+  if (midi.isConnected() && !notifications.midi) midi.setOff()
   if (mic.isMuted()) onMuted()
   else onUnmuted()
 }
 
 function saveSettings() {
+  reloadSettings()        
   settings.set('notificationSettings', notifications)
 }
 
 function MidiConfig(lpd8) {
-  this.lpd8 = lpd8
+  if (!lpd8) return
+
   this.padMute = lpd8.getPad('PAD5')
   this.knobVol = lpd8.getKnob('K1')
 
   this.padMute.onOn(() => { if (notifications.midi) mute() })
   this.padMute.onOff(() => { if (notifications.midi) unmute() })
   this.knobVol.onChange(val => { if (notifications.midi) mic.setDesiredVolume(val) })
+  this.isConnected = () => true
 }
+
+MidiConfig.prototype.setOn = () => {}
+MidiConfig.prototype.setOff = () => {}
+MidiConfig.prototype.setBlinking = () => {}
+MidiConfig.prototype.isConnected = () => false
 
 function menuOnDisableNotifications(sender) {
   notifications.popup = !sender.checked
@@ -89,13 +91,11 @@ function menuOnDisableNotifications(sender) {
 
 function menuOnDisableMidi(sender) {
   notifications.midi = !sender.checked
-  reloadSettings()
   saveSettings()
 }
 
 function menuOnDisableTrayBlinking(sender) {
   notifications.trayBlinking = !sender.checked
-  reloadSettings()        
   saveSettings()
 }
 
@@ -103,7 +103,6 @@ function createTrayMenu() {
   let vol = mic.getVolume()
   return Menu.buildFromTemplate([
     {
-      id: 'micVolumeLbl',
       label: 'Mic ' + (!!vol ? 'volume: ' + vol : 'is muted'),
       enabled: false
     },
@@ -119,8 +118,8 @@ function createTrayMenu() {
     {
       type: 'checkbox',
       label: 'Disable MIDI',
-      checked: !notifications.midi || !midi,
-      enabled: !!midi,
+      checked: !notifications.midi || !midi.isConnected(),
+      enabled: midi.isConnected(),
       click: menuOnDisableMidi
     },
     {
@@ -139,27 +138,23 @@ function createTrayMenu() {
   ])
 }
 
+function onTrayClick(args) {
+  if (args.altKey) {
+    tray.popUpContextMenu(createTrayMenu())
+  } else {
+    toggleMute()
+  }
+}
+
+mic.onMuted(() => onMuted())
+mic.onUnmuted(() => onUnmuted())
+mic.onVolumeChanged(vol => onVolumeChanged(vol))
+
 app.on('ready', () => midi = new MidiConfig(LPD8('LPD8')))
-
-app.on('ready', () => {
-  notifications = settings.get('notificationSettings', notifications)
-})
-
-app.on('ready', () => {
-  tray = new Tray(iconTrayMutedPath)
-
-  tray.on('click', args => {
-    if (args.altKey) {
-      tray.popUpContextMenu(createTrayMenu())
-    } else {
-      toggleMute()
-    }
-  })
-})
-
+app.on('ready', () => notifications = settings.get('notificationSettings', notifications))
+app.on('ready', () => (tray = new Tray(iconTrayMutedPath)).on('click', args => onTrayClick(args)))
 app.on('ready', () => reloadSettings())
-app.on('ready', () => onVolumeChanged())
-app.on('ready', () => globalShortcut.register('Command+Shift+A', toggleMute))
+app.on('ready', () => globalShortcut.register('Command+Shift+A', () => toggleMute()))
 
 app.on('will-quit', args => {
   if (mic.isMuted()) {
