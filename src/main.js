@@ -70,13 +70,17 @@ function saveSettings() {
 function MidiConfig(lpd8) {
   if (!lpd8) return
 
-  this.padMute = lpd8.getPad('PAD5')
-  this.knobVol = lpd8.getKnob('K1')
+  let padMute = lpd8.getPad('PAD5')
+  let knobVol = lpd8.getKnob('K1')
 
-  this.padMute.onOn(() => { if (notifications.midi) mute() })
-  this.padMute.onOff(() => { if (notifications.midi) unmute() })
-  this.knobVol.onChange(val => { if (notifications.midi) mic.setDesiredVolume(val) })
+  padMute.onOn(() => { if (notifications.midi) mute() })
+  padMute.onOff(() => { if (notifications.midi) unmute() })
+  knobVol.onChange(val => { if (notifications.midi) mic.setDesiredVolume(val) })
+
   this.isConnected = () => true
+  this.setOn = () => padMute.setOn()
+  this.setOff = () => padMute.setOff()
+  this.setBlinking = () => padMute.setBlinking()
 }
 
 MidiConfig.prototype.setOn = () => {}
