@@ -24,15 +24,14 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm install -g yarn
+    - run: yarn install
+    - run: yarn test
     - env:
         CSC_IDENTITY_AUTO_DISCOVERY: false
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      run: |
-        yarn install
-        yarn test
-        yarn dist
+      run: yarn dist
     - name: Publish artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: binaries
-        path: dist/**/*
+        name: dist
+        path: dist/
