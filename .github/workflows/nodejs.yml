@@ -29,4 +29,10 @@ jobs:
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
         yarn install
+        yarn test
         yarn dist
+    - name: Publish artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: binaries
+        path: dist/mac
