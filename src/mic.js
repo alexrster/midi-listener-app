@@ -17,7 +17,7 @@ function unmuteMic() {
 }
 
 function setVolume(val, notify = true) {
-  if (val == currentVolume) return
+  if (val == currentVolume) return new Promise(r => r())
 
   var pastVolume = currentVolume
   currentVolume = val
