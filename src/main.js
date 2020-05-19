@@ -107,7 +107,7 @@ function createTrayMenu() {
   let vol = mic.getVolume()
   return Menu.buildFromTemplate([
     {
-      label: 'Mic ' + (!!vol ? 'volume: ' + vol : 'is muted'),
+      label: 'Mic ' + (!!vol ? 'volume: ' + vol + '%' : 'is muted'),
       enabled: false
     },
     {
