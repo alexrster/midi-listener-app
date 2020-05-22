@@ -48,13 +48,18 @@ function osascript(cmd) {
   return execa('osascript', ['-e', cmd]).then(result => result.stdout);
 }
 
-getVolume().then(vol => { 
-  if (!(vol>=0)) throw Error("Can't get volume settings!") 
-  currentVolume = vol
-  desiredVolume = vol > 0 ? vol : DEFAULT_VOLUME
-
-  notifyMuteChanged(undefined, currentVolume)
-});
+try {
+  getVolume().then(vol => { 
+    if (!(vol>=0)) throw Error("Can't get volume settings!") 
+    currentVolume = vol
+    desiredVolume = vol > 0 ? vol : DEFAULT_VOLUME
+  
+    notifyMuteChanged(undefined, currentVolume)
+  })  
+} catch {
+  currentVolume = 100
+  desiredVolume = 100
+}
 
 exports.mic = {
   mute: muteMic,

@@ -6,6 +6,7 @@ const { notifyUser } = require("./notifyUser")
 const { mic } = require('./mic')
 const { LPD8 } = require('./lpd8')
 const { TrayIcon, TrayBlinkingIcon } = require('./trayIcon')
+const { ledMatrix } = require('./ledMatrix')
 
 const iconTrayLivePath = path.join(__dirname, 'images', 'live_22.png')
 const iconTrayLiveInvPath = path.join(__dirname, 'images', 'live-inv_22.png')
@@ -18,18 +19,21 @@ const iconTrayMuted = new TrayIcon(iconTrayMutedPath)
 const iconTrayLive = new TrayIcon(iconTrayLivePath)
 const iconTrayLiveBlinking = new TrayBlinkingIcon(iconTrayLivePath, iconTrayLiveInvPath)
 
+let led = new ledMatrix('http://10.9.9.224:5000')
 let midi = new MidiConfig()
 let tray = null
 let notifications = {
   popup: true,
   midi: true,
-  trayBlinking: true
+  trayBlinking: true,
+  led: true
 }
 
 function onMuted() {
   tray.setIcon(iconTrayMuted)
   if (notifications.midi && midi.isConnected()) midi.setOn()
   if (notifications.popup) notifyUser("Mic is MUTED", 'Handle MIDI command', iconBallonMicMutedPath)
+  if (notifications.led) led.marqueeText('mic mute').then(() => led.startClockMode())
 }
 
 function onUnmuted() {
@@ -38,10 +42,12 @@ function onUnmuted() {
 
   if (notifications.midi && midi.isConnected()) midi.setBlinking()
   if (notifications.popup) notifyUser("Mic is UNMUTED", 'Handle MIDI command', iconBallonLivePath)
+  if (notifications.led) led.setBlinkingText('LIVE')
 }
 
 function onVolumeChanged(vol) {
-  if (notifications.popup) notifyUser("Mic Volume " + vol, 'Handle MIDI command', iconBallonLivePath)
+  if (notifications.popup) notifyUser("Mic Volume " + vol + '%', 'Handle MIDI command', iconBallonLivePath)
+  if (notifications.led) led.marqueeText(vol + '%').then(() => led.setBlinkingText('LIVE'))
 }
 
 function mute() {
@@ -103,6 +109,13 @@ function menuOnDisableTrayBlinking(sender) {
   saveSettings()
 }
 
+function menuOnDisableLed(sender) {
+  if (!sender.checked) led.clear()
+
+  notifications.led = !sender.checked
+  saveSettings()
+}
+
 function createTrayMenu() {
   let vol = mic.getVolume()
   return Menu.buildFromTemplate([
@@ -133,6 +146,12 @@ function createTrayMenu() {
       click: menuOnDisableTrayBlinking
     },
     {
+      type: 'checkbox',
+      label: 'Disable Led',
+      checked: !notifications.led,
+      click: menuOnDisableLed
+    },
+    {
       type: 'separator'
     },
     {
@@ -150,12 +169,19 @@ function onTrayClick(args) {
   }
 }
 
+function loadNotificationSettings() {
+  var n = settings.get('notificationSettings', notifications)
+  if (n.led === undefined) n.led = true
+
+  return n
+}
+
 mic.onMuted(() => onMuted())
 mic.onUnmuted(() => onUnmuted())
 mic.onVolumeChanged(vol => onVolumeChanged(vol))
 
 app.on('ready', () => midi = new MidiConfig(LPD8('LPD8')))
-app.on('ready', () => notifications = settings.get('notificationSettings', notifications))
+app.on('ready', () => notifications = loadNotificationSettings())
 app.on('ready', () => (tray = new Tray(iconTrayMutedPath)).on('click', args => onTrayClick(args)))
 app.on('ready', () => reloadSettings())
 app.on('ready', () => globalShortcut.register('Command+Shift+A', () => toggleMute()))
