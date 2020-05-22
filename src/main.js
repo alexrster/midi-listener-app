@@ -33,7 +33,7 @@ function onMuted() {
   tray.setIcon(iconTrayMuted)
   if (notifications.midi && midi.isConnected()) midi.setOn()
   if (notifications.popup) notifyUser("Mic is MUTED", 'Handle MIDI command', iconBallonMicMutedPath)
-  if (notifications.led) led.marqueeText('mic mute').then(() => led.startClockMode())
+  if (notifications.led) led.marqueeText('mic mute')
 }
 
 function onUnmuted() {

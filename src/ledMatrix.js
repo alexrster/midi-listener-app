@@ -1,5 +1,4 @@
 const http = require('http')
-const moment = require('moment')
 
 function ledMatrix(baseUrl) {
   this.marqueeText = function(text) {
@@ -14,15 +13,7 @@ function ledMatrix(baseUrl) {
 
   this.clear = function() {
     stopBlinking()
-    return setText(' ')
-  }
-
-  var clock1sInterval = null
-  this.startClockMode = function() {
-    stopBlinking()
-    clock1sInterval = setInterval(ctx => {
-      setText(moment().format('hh' + (ctx.counter++ % 2 == 0 ? ':' : ' ') + 'mm'))
-    }, 1000, { counter: 0 })
+    return setText('')
   }
 
   var intervalHandle = null
@@ -57,18 +48,10 @@ function ledMatrix(baseUrl) {
   }
 
   var stopBlinking = function() {
-    stopClockMode()
     if (!intervalHandle) return
 
     clearInterval(intervalHandle)
     intervalHandle = null
-  }
-
-  var stopClockMode = function() {
-    if (!clock1sInterval) return
-
-    clearInterval(clock1sInterval)
-    clock1sInterval = null
   }
 }
 
