@@ -9,7 +9,7 @@ function TrayIcon(icon) {
 function TrayBlinkingIcon(...icons) {
   var intervalHandle
 
-  this.set = function (tray, duration = 667) {
+  this.set = function (tray, duration = 600) {
     setImage(tray, icons[0])
 
     intervalHandle = setInterval(ctx => {

@@ -13,24 +13,24 @@ function ledMatrix(baseUrl) {
 
   this.clear = function() {
     stopBlinking()
-    return setText('')
+    return new Promise((r, _) => r())
   }
 
   var intervalHandle = null
-  this.setBlinkingText = function(text, duration = 667) {
+  this.setBlinkingText = function(text, duration = 600) {
     stopBlinking()
-    setText(text, true).then(() => {
+    setText(text, true, duration).then(() => {
       intervalHandle = setInterval(ctx => {
         ctx.current = !ctx.current
-        setText(text, ctx.current).catch(() => stopBlinking())
-      }, duration, { current: true })
+        setText(text, ctx.current, duration).catch(() => stopBlinking())
+      }, duration, { current: true, duration: duration })
     })
   }
 
-  var setText = function(text, invert) {
+  var setText = function(text, invert, duration) {
     return new Promise((resolve, reject) => {
       try {
-        resolve(http.get(baseUrl + '/set/?msg=' + encodeURI(text)  + (!!invert ? '&invert=1' : '')))
+        resolve(http.get(baseUrl + '/set/?msg=' + encodeURI(text)  + (!!invert ? '&invert=1' : '') + (!!duration ? '&duration=' + duration : '')))
       } catch (e) {
         reject(e)
       }
@@ -52,6 +52,18 @@ function ledMatrix(baseUrl) {
 
     clearInterval(intervalHandle)
     intervalHandle = null
+
+    clearText()
+  }
+
+  var clearText = function() {
+    return new Promise((resolve, reject) => {
+      try {
+        resolve(http.get(baseUrl + '/clear/'))
+      } catch (e) {
+        reject(e)
+      }
+    })    
   }
 }
 

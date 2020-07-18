@@ -1,3 +1,5 @@
+require('./airbrake')
+
 const path = require('path')
 const { app, Tray, globalShortcut, Menu } = require('electron')
 const settings = require('electron-settings');
