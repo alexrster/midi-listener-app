@@ -35,7 +35,7 @@ function onMuted() {
   tray.setIcon(iconTrayMuted)
   if (notifications.midi && midi.isConnected()) midi.setOn()
   if (notifications.popup) notifyUser("Mic is MUTED", 'Handle MIDI command', iconBallonMicMutedPath)
-  if (notifications.led) led.marqueeText('mic mute')
+  if (notifications.led) led.marqueeText('mute').then(() => new Promise((resolve, _) => setTimeout(resolve, 1200))).then(() => led.clear())
 }
 
 function onUnmuted() {
@@ -49,7 +49,7 @@ function onUnmuted() {
 
 function onVolumeChanged(vol) {
   if (notifications.popup) notifyUser("Mic Volume " + vol + '%', 'Handle MIDI command', iconBallonLivePath)
-  if (notifications.led) led.marqueeText(vol + '%').then(() => led.setBlinkingText('LIVE'))
+  if (notifications.led) led.setText(vol + '%', false, 1200).then(() => new Promise((resolve, _) => setTimeout(resolve, 1200))).then(() => led.setBlinkingText('LIVE'))
 }
 
 function mute() {
