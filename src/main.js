@@ -24,6 +24,7 @@ let led = new ledMatrix('http://10.9.9.224:5000')
 let mqttNotifier = new MqttNotifier('tcp://10.9.9.224:1883')
 let midi = new MidiConfig()
 let tray = null
+
 let notifications = {
   popup: true,
   midi: true,
@@ -33,7 +34,7 @@ let notifications = {
 }
 
 function onMuted() {
-  tray.setIcon(iconTrayMuted)
+  iconTrayMuted.set(tray)
   if (notifications.midi && midi.isConnected()) midi.setOn()
   if (notifications.popup) notifyUser("Mic is MUTED", 'Handle MIDI command', iconBallonMicMutedPath)
   if (notifications.led) led.marqueeText('mute')
@@ -41,8 +42,8 @@ function onMuted() {
 }
 
 function onUnmuted() {
-  if (notifications.trayBlinking) tray.setIcon(iconTrayLiveBlinking)
-  else tray.setIcon(iconTrayLive)
+  if (notifications.trayBlinking) iconTrayLiveBlinking.set(tray)
+  else iconTrayLive.set(tray)
 
   if (notifications.midi && midi.isConnected()) midi.setBlinking()
   if (notifications.popup) notifyUser("Mic is UNMUTED", 'Handle MIDI command', iconBallonLivePath)
@@ -76,7 +77,17 @@ function reloadSettings() {
 
 function saveSettings() {
   reloadSettings()        
-  settings.set('notificationSettings', notifications)
+  settings.setSync('notificationSettings', notifications)
+}
+
+function loadNotificationSettings() {
+  var cfg = settings.getSync('notificationSettings')
+
+  notifications.led = cfg.led !== undefined ? cfg.led : true;
+  notifications.midi = cfg.midi !== undefined ? cfg.midi : true;
+  notifications.mqtt = cfg.mqtt !== undefined ? cfg.mqtt : true;
+  notifications.trayBlinking = cfg.trayBlinking !== undefined ? cfg.trayBlinking : true;
+  notifications.popup = cfg.popup !== undefined ? cfg.popup : false;
 }
 
 function MidiConfig(lpd8) {
@@ -189,13 +200,6 @@ function onTrayClick(args) {
   }
 }
 
-function loadNotificationSettings() {
-  var n = settings.get('notificationSettings', notifications)
-  if (n.led === undefined) n.led = true
-  if (n.mqtt === undefined) n.mqtt = true
-  return n
-}
-
 mic.onMuted(() => onMuted())
 mic.onUnmuted(() => onUnmuted())
 mic.onVolumeChanged(vol => onVolumeChanged(vol))
@@ -204,8 +208,8 @@ mqttNotifier.onMuted(() => { if (notifications.mqtt) mute() })
 mqttNotifier.onUnmuted(() => { if (notifications.mqtt) unmute() })
 mqttNotifier.onLevel((val) => { if (notifications.mqtt) mic.setDesiredVolume(val) })
 
+app.on('ready', () => loadNotificationSettings())
 app.on('ready', () => midi = new MidiConfig(LPD8('LPD8')))
-app.on('ready', () => notifications = loadNotificationSettings())
 app.on('ready', () => (tray = new Tray(iconTrayMutedPath)).on('click', args => onTrayClick(args)))
 app.on('ready', () => reloadSettings())
 app.on('ready', () => globalShortcut.register('Command+Shift+A', () => toggleMute()))

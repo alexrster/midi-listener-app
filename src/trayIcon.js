@@ -1,43 +1,45 @@
-const { Tray } = require('electron')
-
 function TrayIcon(icon) {
+  var self = this
+
   this.set = function (tray) {
+    if (!!tray.icon) {
+      if (tray.icon === self) return;
+      else tray.icon.unset()
+    }
+
+    tray.icon = self
     tray.setImage(icon)
   }
+
+  this.unset = function() { }
 }
 
 function TrayBlinkingIcon(...icons) {
+  var self = this
   var intervalHandle
 
+  var setImage = function (tray, imagePath) {
+    tray.setImage(imagePath)
+  }
+
   this.set = function (tray, duration = 600) {
-    setImage(tray, icons[0])
+    if (!!tray.icon) {
+      if (tray.icon === self) return;
+      else tray.icon.unset()
+    }
+
+    tray.icon = self
+    tray.setImage(icons[0])
 
     intervalHandle = setInterval(ctx => {
       if (++ctx.current >= ctx.count) ctx.current = 0
       setImage(tray, icons[ctx.current])
     }, duration, { current: 0, count: icons.length })
-
-    tray.once('before-image-update', () => {
-      clearInterval(intervalHandle)
-    })
   }
 
-  var setImage = function (tray, imagePath) {
-    traySetImage.call(tray, imagePath)
+  this.unset = function() { 
+    clearInterval(intervalHandle)
   }
-}
-
-var traySetImage = Tray.prototype.setImage
-Tray.prototype.setImage = function(imagePath) {
-  this.emit('before-image-update', imagePath)
-  traySetImage.call(this, imagePath)
-}
-
-Tray.prototype.setIcon = function(icon) {
-  if (!!this.currentIcon && this.currentIcon === icon) return
-
-  this.currentIcon = icon
-  icon.set(this)
 }
 
 module.exports = {

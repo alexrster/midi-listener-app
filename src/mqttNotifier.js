@@ -29,7 +29,7 @@ var MqttNotifier = function(url) {
   }
 
   this.notifyLevelChanged = function (value) {
-    client.publish('ay-mbpro/mic/level', value)
+    client.publish('ay-mbpro/mic/level', String(value))
   }
 
   this.isConnected = function () {
@@ -58,7 +58,7 @@ var MqttNotifier = function(url) {
 
   function onMicLevelNotification(value) {
     var level = Number(value)
-    if (!isNaN(level) && level >= 0 && level <= 100) self.emit('onLevel', level)
+    if (!isNaN(level) && level >= 0 && level <= 100) self.emit('onLevel', String(level))
   }
 
   client.on('connect', () => {
