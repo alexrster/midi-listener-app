@@ -1,27 +1,27 @@
-import { join } from 'path';
-import { app, Tray, globalShortcut, Menu } from 'electron';
-import { set, get } from 'electron-settings';
+const path = require('path')
+const { app, Tray, globalShortcut, Menu } = require('electron')
+const settings = require('electron-settings');
 
-import { notifyUser } from "./notifyUser";
-import { mic } from './mic';
-import { LPD8 } from './lpd8';
-import { TrayIcon, TrayBlinkingIcon } from './trayIcon';
-import { ledMatrix } from './ledMatrix';
-import { MqttNotifier } from './mqttNotifier';
+const { notifyUser } = require("./notifyUser")
+const { mic } = require('./mic')
+const { LPD8 } = require('./lpd8')
+const { TrayIcon, TrayBlinkingIcon } = require('./trayIcon')
+const { ledMatrix } = require('./ledMatrix')
+const { MqttNotifier } = require('./mqttNotifier')
 
-const iconTrayLivePath = join(__dirname, 'images', 'live_22.png')
-const iconTrayLiveInvPath = join(__dirname, 'images', 'live-inv_22.png')
-const iconTrayMutedPath = join(__dirname, 'images', 'mic-mute_22.png')
+const iconTrayLivePath = path.join(__dirname, 'images', 'live_22.png')
+const iconTrayLiveInvPath = path.join(__dirname, 'images', 'live-inv_22.png')
+const iconTrayMutedPath = path.join(__dirname, 'images', 'mic-mute_22.png')
 
-const iconBallonLivePath = join(__dirname, 'images', 'on-air.png')
-const iconBallonMicMutedPath = join(__dirname, 'images', 'mic-muted.png')
+const iconBallonLivePath = path.join(__dirname, 'images', 'on-air.png')
+const iconBallonMicMutedPath = path.join(__dirname, 'images', 'mic-muted.png')
 
 const iconTrayMuted = new TrayIcon(iconTrayMutedPath)
 const iconTrayLive = new TrayIcon(iconTrayLivePath)
 const iconTrayLiveBlinking = new TrayBlinkingIcon(iconTrayLivePath, iconTrayLiveInvPath)
 
 let led = new ledMatrix('http://10.9.9.224:5000')
-let mqttNotifier = new MqttNotifier('tcp://10.9.9.224')
+let mqttNotifier = new MqttNotifier('tcp://10.9.9.224:1883')
 let midi = new MidiConfig()
 let tray = null
 let notifications = {
@@ -76,7 +76,7 @@ function reloadSettings() {
 
 function saveSettings() {
   reloadSettings()        
-  set('notificationSettings', notifications)
+  settings.set('notificationSettings', notifications)
 }
 
 function MidiConfig(lpd8) {
@@ -123,9 +123,10 @@ function menuOnDisableLed(sender) {
 }
 
 function menuOnDisableMqtt(sender) {
-  if (!sender.checked) mqttNotifier.stop()
-
   notifications.mqtt = !sender.checked
+  if (notifications.mqtt) notifications.mqtt = mqttNotifier.reconnect()
+  else mqttNotifier.stop()
+
   saveSettings()
 }
 
@@ -189,7 +190,7 @@ function onTrayClick(args) {
 }
 
 function loadNotificationSettings() {
-  var n = get('notificationSettings', notifications)
+  var n = settings.get('notificationSettings', notifications)
   if (n.led === undefined) n.led = true
   if (n.mqtt === undefined) n.mqtt = true
   return n
@@ -201,6 +202,7 @@ mic.onVolumeChanged(vol => onVolumeChanged(vol))
 
 mqttNotifier.onMuted(() => { if (notifications.mqtt) mute() })
 mqttNotifier.onUnmuted(() => { if (notifications.mqtt) unmute() })
+mqttNotifier.onLevel((val) => { if (notifications.mqtt) mic.setDesiredVolume(val) })
 
 app.on('ready', () => midi = new MidiConfig(LPD8('LPD8')))
 app.on('ready', () => notifications = loadNotificationSettings())

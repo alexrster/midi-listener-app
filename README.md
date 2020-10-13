@@ -6,5 +6,6 @@ Latest version: https://github.com/alexrster/midi-listener-app/releases/latest/
 
 - Support MIDI pads and knobs
 - Support Tray notifications
-- Support global shortucts
 - Support Akai LPD8
+- Support MQTT notifications & commands
+- Support global shortucts

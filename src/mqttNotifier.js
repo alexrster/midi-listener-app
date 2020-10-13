@@ -1,68 +1,78 @@
-import { connect } from 'mqtt'
-import { EventEmitter } from 'events'
+const mqtt = require('mqtt')
+const { EventEmitter } = require('events')
 
 const MicMuteStrings = ['off', '0', 'mute', 'muted', 'false', 'inactive', 'disabled']
-const MicActiveStrings = ['on', '1', 'active', 'unmuted', 'true', 'enabled', 'onair', 'live']
+const MicActiveStrings = ['on', '1', 'active', 'unmute', 'unmuted', 'true', 'enabled', 'onair', 'live']
 
-class MqttNotifier {
-  constructor(url) {
-    var self = this
-    var client = connect(url)
+var MqttNotifier = function(url) {
+  var self = this
+  var client = mqtt.connect(url)
 
-    this.onMuted = function (cb) {
-      return self.on('onMuted', cb)
-    }
+  this.onMuted = function (cb) {
+    return self.on('onMuted', cb)
+  }
 
-    this.onUnmuted = function (cb) {
-      return self.on('onUnmuted', cb)
-    }
+  this.onUnmuted = function (cb) {
+    return self.on('onUnmuted', cb)
+  }
 
-    this.notifyMuted = function () {
-      client.publish('ay-mbpro/mic', MicMuteStrings[0])
-    }
+  this.onLevel = function (cb) {
+    return self.on('onLevel', cb)
+  }
 
-    this.notifyUnmuted = function () {
-      client.publish('ay-mbpro/mic', MicActiveStrings[0])
-    }
+  this.notifyMuted = function () {
+    client.publish('ay-mbpro/mic', MicMuteStrings[0])
+  }
 
-    this.notifyLevelChanged = function (value) {
-      client.publish('ay-mbpro/mic/level', value)
-    }
+  this.notifyUnmuted = function () {
+    client.publish('ay-mbpro/mic', MicActiveStrings[0])
+  }
 
-    this.reconnect = function() { 
-      client.reconnect()
-    }
+  this.notifyLevelChanged = function (value) {
+    client.publish('ay-mbpro/mic/level', value)
+  }
 
-    this.stop = function () {
+  this.isConnected = function () {
+    return client.connected;
+  }
+
+  this.reconnect = function(opts = {}) { 
+    if (client.connected) return true
+
+    client.reconnect(opts)
+    return client.connected
+  }
+
+  this.stop = function () {
+    if (client.connected) {
       client.unsubscribe('ay-mbpro/mic/set')
       client.unsubscribe('ay-mbpro/mic/set/level')
       client.end()
     }
-
-    function onMicStateNotification(value) {
-      if (MicMuteStrings.findIndex(value) != -1) self.emit('onMuted')
-      else if (MicActiveStrings.findIndex(value) != -1) self.emit('onUnmuted')
-    }
-
-    function onMicLevelNotification(value) {
-      var level = Number(value)
-      if (!isNaN(level) && level >= 0 && level <= 100) self.emit('onLevel', level)
-    }
-
-    client.on('connect', () => {
-      client.subscribe('ay-mbpro/mic/set')
-      client.subscribe('ay-mbpro/mic/set/level')
-    })
-
-    client.on('message', (topic, message) => {
-      var value = message.toString().toLowerCase().trim()
-      if ('ay-mbpro/mic/set' === topic) onMicStateNotification(value)
-      else if ('ay-mbpro/mic/set/level' === topic) onMicLevelNotification(value)
-    })
   }
+
+  function onMicStateNotification(value) {
+    if (MicMuteStrings.indexOf(value) != -1) self.emit('onMuted')
+    else if (MicActiveStrings.indexOf(value) != -1) self.emit('onUnmuted')
+  }
+
+  function onMicLevelNotification(value) {
+    var level = Number(value)
+    if (!isNaN(level) && level >= 0 && level <= 100) self.emit('onLevel', level)
+  }
+
+  client.on('connect', () => {
+    client.subscribe('ay-mbpro/mic/set')
+    client.subscribe('ay-mbpro/mic/set/level')
+  })
+
+  client.on('message', (topic, message) => {
+    var value = message.toString().toLowerCase().trim()
+    if ('ay-mbpro/mic/set' === topic) onMicStateNotification(value)
+    else if ('ay-mbpro/mic/set/level' === topic) onMicLevelNotification(value)
+  })
 }
 
 MqttNotifier.prototype = Object.create(EventEmitter.prototype);
 
-const _MqttNotifier = MqttNotifier
-export { _MqttNotifier as MqttNotifier }
+exports.MqttNotifier = MqttNotifier
