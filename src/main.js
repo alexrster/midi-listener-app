@@ -1,5 +1,3 @@
-require('./airbrake')
-
 const path = require('path')
 const { app, Tray, globalShortcut, Menu } = require('electron')
 const settings = require('electron-settings');
@@ -23,7 +21,7 @@ const iconTrayLive = new TrayIcon(iconTrayLivePath)
 const iconTrayLiveBlinking = new TrayBlinkingIcon(iconTrayLivePath, iconTrayLiveInvPath)
 
 let led = new ledMatrix('http://10.9.9.224:5000')
-let mqttNotifier = new MqttNotifier('tcp://10.9.9.224')
+let mqttNotifier = new MqttNotifier('tcp://10.9.9.224:1883')
 let midi = new MidiConfig()
 let tray = null
 let notifications = {
@@ -82,7 +80,7 @@ function saveSettings() {
 }
 
 function MidiConfig(lpd8) {
-  if (!lpd8) return
+  if (!lpd8) return;
 
   let padMute = lpd8.getPad('PAD5')
   let knobVol = lpd8.getKnob('K1')
@@ -124,6 +122,14 @@ function menuOnDisableLed(sender) {
   saveSettings()
 }
 
+function menuOnDisableMqtt(sender) {
+  notifications.mqtt = !sender.checked
+  if (notifications.mqtt) notifications.mqtt = mqttNotifier.reconnect()
+  else mqttNotifier.stop()
+
+  saveSettings()
+}
+
 function createTrayMenu() {
   let vol = mic.getVolume()
   return Menu.buildFromTemplate([
@@ -160,6 +166,12 @@ function createTrayMenu() {
       click: menuOnDisableLed
     },
     {
+      type: 'checkbox',
+      label: 'Disable MQTT',
+      checked: !notifications.mqtt,
+      click: menuOnDisableMqtt
+    },
+    {
       type: 'separator'
     },
     {
@@ -180,7 +192,7 @@ function onTrayClick(args) {
 function loadNotificationSettings() {
   var n = settings.get('notificationSettings', notifications)
   if (n.led === undefined) n.led = true
-
+  if (n.mqtt === undefined) n.mqtt = true
   return n
 }
 
@@ -190,6 +202,7 @@ mic.onVolumeChanged(vol => onVolumeChanged(vol))
 
 mqttNotifier.onMuted(() => { if (notifications.mqtt) mute() })
 mqttNotifier.onUnmuted(() => { if (notifications.mqtt) unmute() })
+mqttNotifier.onLevel((val) => { if (notifications.mqtt) mic.setDesiredVolume(val) })
 
 app.on('ready', () => midi = new MidiConfig(LPD8('LPD8')))
 app.on('ready', () => notifications = loadNotificationSettings())

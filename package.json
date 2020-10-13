@@ -1,6 +1,6 @@
 {
   "name": "midilistener.app",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "MIDI listener app for Mac OS X",
   "main": "src/main.js",
   "scripts": {
@@ -29,20 +29,19 @@
   "git": "https://github.com/alexrster/midi-listener-app",
   "repository": "https://github.com/alexrster/midi-listener-app",
   "devDependencies": {
-    "electron": "^8.2.1",
-    "electron-builder": "^22.4.1",
-    "electron-rebuild": "^1.10.1",
-    "mocha": "^7.1.2",
+    "electron": "^10.1.3",
+    "electron-builder": "^22.9.1",
+    "electron-rebuild": "^2.2.0",
+    "mocha": "^8.1.3",
     "mochawesome": "^6.1.1"
   },
   "dependencies": {
-    "@airbrake/node": "^1.1.3",
-    "easymidi": "^1.0.3",
-    "electron-settings": "^3.2.0",
-    "events": "^3.1.0",
-    "execa": "^4.0.0",
-    "moment": "^2.26.0",
-    "util": "^0.12.3",
-    "mqtt": "^4.2.1"
+    "easymidi": "^2.0.1",
+    "electron-settings": "^4.0.2",
+    "events": "^3.2.0",
+    "execa": "^4.0.3",
+    "moment": "^2.29.1",
+    "mqtt": "^4.2.1",
+    "util": "^0.12.3"
   }
 }
