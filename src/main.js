@@ -9,6 +9,9 @@ const { TrayIcon, TrayBlinkingIcon } = require('./trayIcon')
 const { ledMatrix } = require('./ledMatrix')
 const { MqttNotifier } = require('./mqttNotifier')
 
+const { SettingsController } = require('./controllers/settingsController');
+const { log } = require('console');
+
 const iconTrayLivePath = path.join(__dirname, 'images', 'live_22.png')
 const iconTrayLiveInvPath = path.join(__dirname, 'images', 'live-inv_22.png')
 const iconTrayMutedPath = path.join(__dirname, 'images', 'mic-mute_22.png')
@@ -70,17 +73,18 @@ function toggleMute() {
 }
 
 function reloadSettings() {
+  loadSettings()  
   if (midi.isConnected() && !notifications.midi) midi.setOff()
   if (mic.isMuted()) onMuted()
   else onUnmuted()
 }
 
-function saveSettings() {
+function saveSettings(settings) {
+  settings.setSync('notificationSettings', (settings || notifications))
   reloadSettings()        
-  settings.setSync('notificationSettings', notifications)
 }
 
-function loadNotificationSettings() {
+function loadSettings() {
   var cfg = settings.getSync('notificationSettings')
 
   notifications.led = cfg.led !== undefined ? cfg.led : true;
@@ -141,6 +145,17 @@ function menuOnDisableMqtt(sender) {
   saveSettings()
 }
 
+function menuOnSettings(sender) {
+  const settingsController = new SettingsController()
+
+  settingsController.onSettingsUpdated(() => {
+    log("onSettingsUpdated")
+    log(args)
+  })
+
+  settingsController.show()
+}
+
 function createTrayMenu() {
   let vol = mic.getVolume()
   return Menu.buildFromTemplate([
@@ -186,6 +201,13 @@ function createTrayMenu() {
       type: 'separator'
     },
     {
+      label: 'Settings...',
+      click: menuOnSettings,
+    },
+    {
+      type: 'separator'
+    },
+    {
       label: 'Quit',
       click: () => app.quit()
     }
@@ -208,7 +230,7 @@ mqttNotifier.onMuted(() => { if (notifications.mqtt) mute() })
 mqttNotifier.onUnmuted(() => { if (notifications.mqtt) unmute() })
 mqttNotifier.onLevel((val) => { if (notifications.mqtt) mic.setDesiredVolume(val) })
 
-app.on('ready', () => loadNotificationSettings())
+app.on('ready', () => loadSettings())
 app.on('ready', () => midi = new MidiConfig(LPD8('LPD8')))
 app.on('ready', () => (tray = new Tray(iconTrayMutedPath)).on('click', args => onTrayClick(args)))
 app.on('ready', () => reloadSettings())
@@ -220,5 +242,7 @@ app.on('will-quit', args => {
     mic.unmute().then(() => app.quit())
   }
 })
+
+app.on('window-all-closed', () => { })
 
 if (app.isPackaged) app.dock.hide()

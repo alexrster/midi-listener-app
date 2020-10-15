@@ -1,9 +1,10 @@
 {
   "name": "midilistener.app",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "MIDI listener app for Mac OS X",
   "main": "src/main.js",
   "scripts": {
+    "prepack": "gulp",
     "start": "electron src/main.js",
     "test": "mocha",
     "pack": "electron-builder --dir",
@@ -32,6 +33,12 @@
     "electron": "^10.1.3",
     "electron-builder": "^22.9.1",
     "electron-rebuild": "^2.2.0",
+    "gulp": "^4.0.2",
+    "gulp-concat": "^2.6.1",
+    "gulp-filter": "^6.0.0",
+    "gulp-load-plugins": "^2.0.5",
+    "gulp-order": "^1.2.0",
+    "main-bower-files": "^2.13.3",
     "mocha": "^8.1.3",
     "mochawesome": "^6.1.1"
   },

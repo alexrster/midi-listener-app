@@ -1,0 +1,30 @@
+{
+  "name": "midilistener.app",
+  "description": "MIDI listener app for Mac OS X",
+  "main": "src/main.js",
+  "authors": [
+    "AY <a@qx.zone>"
+  ],
+  "license": "GPL-3.0-or-later",
+  "keywords": [
+    "midi",
+    "mic",
+    "tray",
+    "electron",
+    "mac"
+  ],
+  "homepage": "https://github.com/alexrster/midi-listener-app",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "^3.5.1",
+    "json-editor": "^0.7.28",
+    "bootstrap": "^4.5.3",
+    "requirejs": "^2.3.6"
+  }
+}
