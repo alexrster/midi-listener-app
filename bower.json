@@ -22,8 +22,8 @@
   ],
   "dependencies": {
     "jquery": "^3.5.1",
-    "json-editor": "^0.7.28",
     "bootstrap": "^4.5.3",
-    "requirejs": "^2.3.6"
+    "requirejs": "^2.3.6",
+    "jsoneditor": "^9.1.1"
   }
 }

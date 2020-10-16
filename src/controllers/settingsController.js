@@ -1,7 +1,8 @@
 const { BrowserWindow, ipcMain } = require('electron')
 
-var settingsController = function () {
+var settingsController = function (settings) {
   var self = this
+  self.settings = (settings || {})
 
   const win = new BrowserWindow({
     width: 800,
@@ -17,10 +18,9 @@ var settingsController = function () {
   this.onSettingsUpdatedCallback = function () { }
 
   this.show = function () {
+    win.once('ready-to-show', () => win.show());
+
     win.loadURL(`file://${__dirname}/../app/settings/index.html`)
-    win.once('ready-to-show', () => {
-      win.show()
-    })
   }
 
   this.onSettingsUpdated = function (cb) {
@@ -31,6 +31,15 @@ var settingsController = function () {
     var d = (args[0] || {})
     if (d.action === 'settings.set') {
       self.onSettingsUpdatedCallback.call(this, d.settings)
+    }
+  })
+
+  ipcMain.on('settings', (e, op, data) => {
+    if (op == 'get') {
+      e.returnValue = self.settings;
+    } else if (op == 'set') {
+      if (!!data) self.onSettingsUpdatedCallback.call(this, data)
+      else e.returnValue = false;
     }
   })
 }

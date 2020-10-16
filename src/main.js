@@ -146,7 +146,7 @@ function menuOnDisableMqtt(sender) {
 }
 
 function menuOnSettings(sender) {
-  const settingsController = new SettingsController()
+  const settingsController = new SettingsController(notifications)
 
   settingsController.onSettingsUpdated(() => {
     log("onSettingsUpdated")

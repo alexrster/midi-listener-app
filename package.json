@@ -8,8 +8,8 @@
   "repository": "https://github.com/alexrster/midi-listener-app",
   "main": "src/main.js",
   "scripts": {
-    "prestart": "gulp js.libs css.libs",
-    "prepack": "gulp js.libs css.libs",
+    "prestart": "gulp js.libs css.libs assets.libs",
+    "prepack": "gulp js.libs css.libs assets.libs",
     "start": "electron-forge start",
     "test": "mocha",
     "package": "electron-forge package",
@@ -24,7 +24,7 @@
   },
   "config": {
     "forge": {
-      "packagerConfig": { },
+      "packagerConfig": {},
       "makers": [
         {
           "name": "@electron-forge/maker-zip",
@@ -68,6 +68,7 @@
     "gulp": "^4.0.2",
     "gulp-concat": "^2.6.1",
     "gulp-filter": "^6.0.0",
+    "gulp-flatten": "^0.4.0",
     "gulp-load-plugins": "^2.0.5",
     "gulp-order": "^1.2.0",
     "main-bower-files": "^2.13.3",

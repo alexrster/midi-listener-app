@@ -8,8 +8,8 @@
       "type": "node",
       "request": "launch",
       "name": "Electron Main",
-      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
-      "program": "${workspaceFolder}/src/main.js",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/yarn-or-npm",
+      "program": "start",
       "skipFiles": [
         "<node_internals>/**"
       ]
