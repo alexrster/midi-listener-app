@@ -7,9 +7,10 @@ var settingsController = function () {
     width: 800,
     height: 600,
     webPreferences: {
-      //nodeIntegration: true,
+      nodeIntegration: true,
       devTools: true,
-      textAreasAreResizable: false
+      textAreasAreResizable: false,
+      worldSafeExecuteJavaScript: true
     }
   })
 

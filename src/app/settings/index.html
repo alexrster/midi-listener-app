@@ -3,16 +3,18 @@
 <head>
   <meta charset="utf-8">
 
+  <base href="./">
   <script src="../assets/scripts.js"></script>
   <link rel="stylesheet" href="../assets/styles.css">
-
-  <script src="./settingsViewController.js"></script>
 </head>
 <body style="font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;">
   <h1>SETTINGS PAGE</h1>
 
   <div id="json-editor-form"></div>
 
-  <button onclick="javascript:updateSettings()" value="save" title="SAVE"></button>
+  <button onclick="javascript:updateSettings()" value="save">SAVE</button>
+  <script>
+    init()
+  </script>
 </body>
 </html>

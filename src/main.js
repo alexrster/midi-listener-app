@@ -85,7 +85,7 @@ function saveSettings(settings) {
 }
 
 function loadSettings() {
-  var cfg = settings.getSync('notificationSettings')
+  var cfg = (settings.getSync('notificationSettings') || {})
 
   notifications.led = cfg.led !== undefined ? cfg.led : true;
   notifications.midi = cfg.midi !== undefined ? cfg.midi : true;

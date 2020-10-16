@@ -15,7 +15,6 @@
   ],
   "homepage": "https://github.com/alexrster/midi-listener-app",
   "ignore": [
-    "**/.*",
     "node_modules",
     "bower_components",
     "test",

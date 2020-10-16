@@ -1,4 +1,4 @@
-const {ipcRenderer} = require(['electron']) 
+const { ipcRenderer } = require('electron');
 
 // {
 //   "title": "Person",
@@ -176,8 +176,8 @@ let jedata = {
     "ajax": 0,
     "ajaxCredentials": 0,
     "show_opt_in": 0,
-    "disable_edit_json": 0,
-    "disable_collapse": 0,
+    "disable_edit_json": 1,
+    "disable_collapse": 1,
     "disable_properties": 0,
     "disable_array_add": 0,
     "disable_array_reorder": 0,
@@ -202,8 +202,8 @@ let jedata = {
     "lib_jquery": 0,
     "lib_dompurify": 0
   },
-  "code": "// The following lines are mandatory and readonly. You can add custom code above and below.\nif (jseditor instanceof window.JSONEditor) jseditor.destroy();\njseditor = new window.JSONEditor(document.querySelector(\"#json-editor-form\"), jedata);",
-  "style": "",
+//  "code": "// The following lines are mandatory and readonly. You can add custom code above and below.\nif (jseditor instanceof window.JSONEditor) jseditor.destroy();\njseditor = new window.JSONEditor(document.querySelector(\"#json-editor-form\"), jedata);",
+//  "style": "",
   "desc": "Add optional description here. (HTML format)"
 }
 
@@ -216,9 +216,7 @@ function updateSettings() {
     })
 }
 
-var jseditor = {}
-
-$(function() {
-  if (jseditor instanceof window.JSONEditor) jseditor.destroy();
+var jseditor;
+function init() {
   jseditor = new window.JSONEditor(document.querySelector("#json-editor-form"), jedata);
-})
+}
