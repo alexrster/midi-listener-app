@@ -12,7 +12,7 @@ ipcRenderer.on('settings-data', function (event, data) {
 });
 
 function updateSettings() {
-  ipcRenderer.sendSync('settings', 'set', editor.get());
+  ipcRenderer.sendSync('settings', 'set', editor.get())
 }
 
 function init() {

@@ -23,11 +23,6 @@ const iconTrayMuted = new TrayIcon(iconTrayMutedPath)
 const iconTrayLive = new TrayIcon(iconTrayLivePath)
 const iconTrayLiveBlinking = new TrayBlinkingIcon(iconTrayLivePath, iconTrayLiveInvPath)
 
-let led = new ledMatrix('http://10.9.9.224:5000')
-let mqttNotifier = new MqttNotifier('tcp://10.9.9.224:1883')
-let midi = new MidiConfig()
-let tray = null
-
 let notifications = {
   popup: true,
   midi: true,
@@ -35,6 +30,11 @@ let notifications = {
   led: true,
   mqtt: true
 }
+
+let led = new ledMatrix('http://10.9.9.224:5000')
+let mqttNotifier = new MqttNotifier('tcp://10.9.9.224:1883')
+let midi = new MidiConfig()
+let tray = null
 
 function onMuted() {
   iconTrayMuted.set(tray)
@@ -79,8 +79,8 @@ function reloadSettings() {
   else onUnmuted()
 }
 
-function saveSettings(settings) {
-  settings.setSync('notificationSettings', (settings || notifications))
+function saveSettings(data) {
+  settings.setSync('notificationSettings', (data || notifications))
   reloadSettings()        
 }
 
@@ -92,6 +92,7 @@ function loadSettings() {
   notifications.mqtt = cfg.mqtt !== undefined ? cfg.mqtt : true;
   notifications.trayBlinking = cfg.trayBlinking !== undefined ? cfg.trayBlinking : true;
   notifications.popup = cfg.popup !== undefined ? cfg.popup : false;
+  notifications.mqttUrl = cfg.mqttUrl !== undefined ? cfg.mqttUrl : 'tcp://10.9.9.224:1883';
 }
 
 function MidiConfig(lpd8) {
@@ -145,15 +146,9 @@ function menuOnDisableMqtt(sender) {
   saveSettings()
 }
 
-function menuOnSettings(sender) {
-  const settingsController = new SettingsController(notifications)
-
-  settingsController.onSettingsUpdated(() => {
-    log("onSettingsUpdated")
-    log(args)
-  })
-
-  settingsController.show()
+function menuOnSettings() {
+  new SettingsController(notifications)
+    .show(data => saveSettings(data));
 }
 
 function createTrayMenu() {

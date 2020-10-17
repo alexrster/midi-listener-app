@@ -1,8 +1,8 @@
 const mqtt = require('mqtt')
 const { EventEmitter } = require('events')
 
-const MicMuteStrings = ['off', '0', 'mute', 'muted', 'false', 'inactive', 'disabled']
-const MicActiveStrings = ['on', '1', 'active', 'unmute', 'unmuted', 'true', 'enabled', 'onair', 'live']
+const MicMuteStrings = ['off', '0', 'mute', 'muted', 'false', 'inactive', 'disabled', '-']
+const MicActiveStrings = ['on', '1', 'active', 'unmute', 'unmuted', 'true', 'enabled', 'onair', 'live', '+']
 
 var MqttNotifier = function(url) {
   var self = this
