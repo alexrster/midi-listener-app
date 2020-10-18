@@ -4,9 +4,10 @@ const { EventEmitter } = require('events')
 const MicMuteStrings = ['off', '0', 'mute', 'muted', 'false', 'inactive', 'disabled', '-']
 const MicActiveStrings = ['on', '1', 'active', 'unmute', 'unmuted', 'true', 'enabled', 'onair', 'live', '+']
 
-var MqttNotifier = function(url) {
+var MqttNotifier = function() {
   var self = this
-  var client = mqtt.connect(url)
+  var client = null
+  var topics = []
 
   this.onMuted = function (cb) {
     return self.on('onMuted', cb)
@@ -20,33 +21,38 @@ var MqttNotifier = function(url) {
     return self.on('onLevel', cb)
   }
 
+  this.on = function (event, cb) {
+    if (topics.indexOf(event) === -1) topics.push(event)
+    if (self.isConnected()) client.subscribe(event)
+
+    return EventEmitter.prototype.on.bind(self)(event, cb)
+  }
+
   this.notifyMuted = function () {
-    client.publish('ay-mbpro/mic', MicMuteStrings[0])
+    self.notify('ay-mbpro/mic', MicMuteStrings[0])
   }
 
   this.notifyUnmuted = function () {
-    client.publish('ay-mbpro/mic', MicActiveStrings[0])
+    self.notify('ay-mbpro/mic', MicActiveStrings[0])
   }
 
   this.notifyLevelChanged = function (value) {
-    client.publish('ay-mbpro/mic/level', String(value))
+    self.notify('ay-mbpro/mic/level', String(value))
+  }
+
+  this.notify = function (topic, value) {
+    if (self.isConnected()) client.publish(topic, value)
   }
 
   this.isConnected = function () {
-    return client.connected;
-  }
-
-  this.reconnect = function(opts = {}) { 
-    if (client.connected) return true
-
-    client.reconnect(opts)
-    return client.connected
+    return !!client && client.connected;
   }
 
   this.stop = function () {
-    if (client.connected) {
-      client.unsubscribe('ay-mbpro/mic/set')
-      client.unsubscribe('ay-mbpro/mic/set/level')
+    if (self.isConnected()) {
+      topics.forEach(v => client.unsubscribe(v))
+      topics = []
+
       client.end()
     }
   }
@@ -61,16 +67,21 @@ var MqttNotifier = function(url) {
     if (!isNaN(level) && level >= 0 && level <= 100) self.emit('onLevel', String(level))
   }
 
-  client.on('connect', () => {
-    client.subscribe('ay-mbpro/mic/set')
-    client.subscribe('ay-mbpro/mic/set/level')
-  })
+  this.connect = function(url) {
+    client = mqtt.connect(url)
 
-  client.on('message', (topic, message) => {
-    var value = message.toString().toLowerCase().trim()
-    if ('ay-mbpro/mic/set' === topic) onMicStateNotification(value)
-    else if ('ay-mbpro/mic/set/level' === topic) onMicLevelNotification(value)
-  })
+    client.on('connect', () => {      
+      topics.forEach(v => client.subscribe(v))
+    })
+  
+    client.on('message', (topic, message) => {
+      var value = message.toString().toLowerCase().trim()
+      if (!!topic && topics.indexOf(topic) >= 0) self.emit(topic, value)
+    })
+
+    self.on('ay-mbpro/mic/set', onMicStateNotification)
+    self.on('ay-mbpro/mic/set/level', onMicLevelNotification)
+  }
 }
 
 MqttNotifier.prototype = Object.create(EventEmitter.prototype);

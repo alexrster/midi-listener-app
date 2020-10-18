@@ -1,6 +1,6 @@
 {
   "name": "midilistener.app",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "MIDI listener app for Mac OS X",
   "author": "AY <a@qx.zone>",
   "license": "GPL-3.0-or-later",
