@@ -1,6 +1,9 @@
 node_modules
+bower_components
 *-lock.json
 dist
 *.tgz
 *.lock
 mochawesome-report/
+src/app/assets/
+out/
