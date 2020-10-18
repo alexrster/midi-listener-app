@@ -1,6 +1,6 @@
 {
   "name": "midilistener.app",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "MIDI listener app for Mac OS X",
   "author": "AY <a@qx.zone>",
   "license": "GPL-3.0-or-later",
@@ -25,6 +25,7 @@
   "config": {
     "forge": {
       "packagerConfig": {
+        "executableName": "MIDI listener",
         "icon": "icon.icns"
       },
       "makers": [
