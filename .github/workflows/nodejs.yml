@@ -31,6 +31,7 @@ jobs:
         yarn install
         bower install
         cd bower_components/jsoneditor
+        npm install
         npm run build
         cd ../../
         gulp js.libs css.libs assets.libs
