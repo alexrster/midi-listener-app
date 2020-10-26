@@ -14,9 +14,6 @@ gulp.task('js.libs', () => {
 				},
 				bootstrap: {
 					ignore: true
-					// main: [
-					// 	'./dist/js/bootstrap.min.js'
-					// ]
 				},
 				jsoneditor: {
 					main: [
