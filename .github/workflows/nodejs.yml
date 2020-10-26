@@ -30,6 +30,9 @@ jobs:
       run: |
         yarn install
         bower install
+        cd bower_components/jsoneditor
+        npm run build
+        cd ../../
         gulp js.libs css.libs assets.libs
         yarn test --reporter mochawesome
         yarn make
