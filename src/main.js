@@ -10,7 +10,6 @@ const { ledMatrix } = require('./ledMatrix')
 const { MqttNotifier } = require('./mqttNotifier')
 
 const { SettingsController } = require('./controllers/settingsController');
-const { log } = require('console');
 
 const iconTrayLivePath = path.join(__dirname, 'images', 'live_22.png')
 const iconTrayLiveInvPath = path.join(__dirname, 'images', 'live-inv_22.png')
@@ -27,6 +26,8 @@ const falseVals = ['off', '0', 'mute', 'muted', 'false', 'inactive', 'disabled',
 const trueVals = ['on', '1', 'active', 'unmute', 'unmuted', 'true', 'enabled', 'onair', 'live', '+']
 
 let actions = {}
+
+/* jshint -W061 */
 let converters = {
   bool2str: function(trueVal = "true", falseVal = "false") { return x => x ? trueVal : falseVal },
   str2bool: function(defaultVal = false) {
@@ -38,7 +39,9 @@ let converters = {
     }
   },
   num2bool: function() { return x => !!x && Number(x) > 0 },
-  multiply: function(num = 1) { return x => x * num }
+  multiply: function(num = 1) { return x => x * num },
+  str: function(x) { return () => String(x) },
+  num: function(x) { return () => Number(x) }
 }
 
 let notifications = {
@@ -124,7 +127,8 @@ notifications.eventBindings = sampleBindings
 function getActionHandler(i) {
   const func = eval(`actions.${i.action}`)
   const convFunc = !!i.converter ? eval(`converters.${i.converter}`) : _ => _;
-  return func instanceof Function ? p => func(convFunc(p)) : () => {};
+  const exprFunc = !!i.expr ? eval(`(function(x) { return (${i.expr}); })`) : _ => _;
+  return func instanceof Function ? p => func(exprFunc(convFunc(p))) : () => {};
 }
 
 function reloadMqtt(url, bindings) {
@@ -184,6 +188,16 @@ function MidiConfig(lpd8) {
         const p = lpd8.getPad(v.pad)
         p.onOn(() => (getActionHandler(v))(true))
         p.onOff(() => (getActionHandler(v))(false))
+      }
+      else if (!!v.button) {
+        const p = lpd8.getPad(v.button)
+        var btnTimeout = 0
+        p.onOn(function() { 
+          (getActionHandler(v))(true);
+
+          if (btnTimeout) clearTimeout(btnTimeout);
+          btnTimeout = setTimeout(() => { p.setOff(); btnTimeout = 0; }, 100); 
+        })
       }
       if (!!v.knob) {
         lpd8.getKnob(v.knob).onChange(val => (getActionHandler(v))(val))
