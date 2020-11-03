@@ -125,10 +125,22 @@ var sampleBindings = [
 notifications.eventBindings = sampleBindings
 
 /* jshint -W061 */
+function evalToFunction(x) {
+  if (!!x)
+    try {
+      return eval(x);
+    }
+    catch (e) {
+      console.log(e);
+    }
+
+  return _ => _;
+}
+
 function getActionHandler(i) {
   const func = eval(`actions.${i.action}`)
-  const convFunc = !!i.converter ? eval(`converters.${i.converter}`) : _ => _;
-  const exprFunc = !!i.expr ? eval(`(function(x) { return (${i.expr}); })`) : _ => _;
+  const convFunc = !!i.converter ? evalToFunction(`converters.${i.converter}`) : _ => _;
+  const exprFunc = !!i.expr ? evalToFunction(`(function(x) { return (${i.expr}); })`) : _ => _;
   return func instanceof Function ? p => func(exprFunc(convFunc(p))) : () => {};
 }
 
