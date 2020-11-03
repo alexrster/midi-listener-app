@@ -40,6 +40,7 @@ let converters = {
   },
   num2bool: function() { return x => !!x && Number(x) > 0 },
   multiply: function(num = 1) { return x => x * num },
+  exp: function(max) { return x => ((Math.sin(x * Math.PI/max - Math.PI/2) + 1) / 2) * max }, // [0..max] to be converted to [0..1] range using f(x)=(sin(o)+1)/2, o=[-Pi/2..Pi/2] => (0=-Pi/2, max=Pi/2)
   str: function(x) { return () => String(x) },
   num: function(x) { return () => Number(x) }
 }
