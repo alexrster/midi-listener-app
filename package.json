@@ -1,6 +1,6 @@
 {
   "name": "midilistener.app",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "MIDI listener app for Mac OS X",
   "author": "AY <a@qx.zone>",
   "license": "GPL-3.0-or-later",
@@ -73,6 +73,8 @@
     "electron-squirrel-startup": "^1.0.0",
     "events": "^3.2.0",
     "execa": "^4.0.3",
+    "fast-xml-parser": "^3.17.4",
+    "he": "^1.2.0",
     "moment": "^2.29.1",
     "mqtt": "^4.2.1",
     "util": "^0.12.3"
