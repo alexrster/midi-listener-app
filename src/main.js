@@ -8,6 +8,7 @@ const { LPD8 } = require('./lpd8')
 const { TrayIcon, TrayBlinkingIcon } = require('./trayIcon')
 const { ledMatrix } = require('./ledMatrix')
 const { MqttNotifier } = require('./mqttNotifier')
+const { Wled } = require('./wled')
 
 const { SettingsController } = require('./controllers/settingsController');
 
@@ -40,7 +41,8 @@ let converters = {
   },
   num2bool: function() { return x => !!x && Number(x) > 0 },
   multiply: function(num = 1) { return x => x * num },
-  exp: function(max) { return x => ((Math.sin(x * Math.PI/max - Math.PI/2) + 1) / 2) * max }, // [0..max] to be converted to [0..1] range using f(x)=(sin(o)+1)/2, o=[-Pi/2..Pi/2] => (0=-Pi/2, max=Pi/2)
+  exp: function(max) { return x => ((Math.sin(x * Math.PI/max - Math.PI/2) + 1) / 2) * max }, // [0..max] to be converted to [0..1] range and then back to [0..max]
+  exp3: function(max) { return x => ((Math.pow(Math.sin(x * Math.PI/max - Math.PI/2), 3) + 1) / 2) * max }, // [0..max] to be converted to [0..1] range and then back to [0..max]
   str: function(x) { return () => String(x) },
   num: function(x) { return () => Number(x) }
 }
@@ -205,11 +207,17 @@ function MidiConfig(lpd8) {
       else if (!!v.button) {
         const p = lpd8.getPad(v.button)
         var btnTimeout = 0
-        p.onOn(function() { 
+        var handler = function() { 
           (getActionHandler(v))(true);
 
           if (btnTimeout) clearTimeout(btnTimeout);
           btnTimeout = setTimeout(() => { p.setOff(); btnTimeout = 0; }, 100); 
+        }
+
+        p.onOn(handler)
+        p.onOff(() => {
+          p.setOn()
+          handler() 
         })
       }
       if (!!v.knob) {
