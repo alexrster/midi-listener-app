@@ -1,9 +1,9 @@
 const assert = require('assert')
-const { Wled } = require('../src/wled')
+const { MqttWled } = require('../src/mods/wled')
 
 describe('WLED', () => {
   it('should be created', () => {
-    const wled = new Wled(_ => _)
+    const wled = new MqttWled(_ => _)
     assert.notStrictEqual(wled.config, null, 'wled.config is null')
   })
 
@@ -12,11 +12,11 @@ describe('WLED', () => {
       assert.ok(true)
     }
 
-    const wled = new Wled(cb)
+    const wled = new MqttWled(cb)
   })
   
   it('should have default config', () => {
-    const wled = new Wled(_ => _)
+    const wled = new MqttWled(_ => _)
     assert.ok(wled.config, 'Config shouldn\'t be null')
   })
 
@@ -26,7 +26,7 @@ describe('WLED', () => {
       updFunc = f
     }
 
-    const wled = new Wled(cb)
+    const wled = new MqttWled(cb)
     updFunc(`<?xml version="1.0" ?>
     <vs>
       <ac>16</ac>

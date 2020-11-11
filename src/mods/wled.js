@@ -1,6 +1,8 @@
 const parser = require('fast-xml-parser');
 const he = require('he');
-const { EventEmitter } = require('events')
+const { EventEmitter } = require('events');
+const { actions } = require('../actions');
+const request = require('request')
 
 /*
 <?xml version="1.0" ?>
@@ -76,13 +78,13 @@ function parseWledXml(xmlData) {
   try {
     return parser.parse(xmlData, options, true);
   } catch(error) {
-    console.log(error.message)
+    console.log(error.message);
   }
 
-  return null
+  return null;
 }
 
-var wled = function(subscriberFunc) {
+var wled = function(opts) {
   var self = this;
 
   this.config = {
@@ -108,22 +110,98 @@ var wled = function(subscriberFunc) {
     "segmentIndex": 0,
   }
 
-  var setProp = function(prop, val) {
-    if (!!xmlMap[prop]) self.config[xmlMap[prop]] = val;
+  if (!!opts) {
+    this.name = (opts.name || '')
+    this.address = (opts.address || '')
+    this.ip = (opts.ip || '')
   }
 
-  var onStateCallback = function(xmlData) {
+  var setProp = function(prop, val) {
+    if (!!xmlMap[prop]) {
+      if (!!self.config[xmlMap[prop]] && self.config[xmlMap[prop]] !== val) {
+        var oldVal = self.config[xmlMap[prop]];
+        self.config[xmlMap[prop]] = val;
+        self.emit(xmlMap[prop], val, oldVal);
+      }
+    }
+  }
+
+  this.onState = function(xmlData) {
     var state = parseWledXml(xmlData);
     if (!state || !state.vs) return;
 
     for (var i in state.vs) {
       setProp(i, state.vs[i]);
     }
+
+    self.emit('state', self.config);
   }
 
-  subscriberFunc(onStateCallback);
+  this.sendJson = function(json) {
+    if (!self.ip && !self.address) {
+      console.log('No IP address is found for: ' + self.name);
+      return;
+    }
+    
+    var address = (self.address || `http://${self.ip}`)
+    request.post(`${address}/json`, { json: json }, (err, res) => {
+      if (!!err) console.error(err, json);
+      if (!!res.body && !!res.body.error) console.error(res.body, json);
+    });
+  }
 }
 
 wled.prototype = Object.create(EventEmitter.prototype);
 
+var mqttWled = function(subscriberFunc) {
+  subscriberFunc(this.onState);
+}
+
+mqttWled.prototype = Object.create(wled.prototype);
+
+var wleds = {}
+
+function initOpts(opts) {
+  if (!!opts.wleds) {
+    opts.wleds.forEach(w => {
+      if (!!w.name) wleds[w.name] = new wled(w)
+    })
+  }
+}
+
+function initModActions(actions) {
+  actions.wled = function(name) {
+    if (!wleds[name]) wleds[name] = new wled({name: name});
+
+    return {
+      onState: wleds[name].onState,
+      sendJson: wleds[name].sendJson
+    }
+  }
+}
+
+function initEventBindings(eventBindings) {
+  eventBindings.forEach(v => {
+    if (v.type === 'wled' && !!v.name) {
+      if (!wleds[v.name]) wleds[v.name] = new wled({name: v.name});
+      if (!!v.onPropChange) {
+        wleds[v.name].on(v.onPropChange, () => actions.getActionHandler(v))
+      }
+    }
+  })
+}
+
+
+function modUnloader(opts, config, actions) {}
+
+function modLoader(opts, config, actions) {
+  initOpts((opts || {}));
+  initModActions(actions);
+  initEventBindings(config.eventBindings);
+
+  return () => modUnloader(opts, config, actions);
+}
+
 exports.Wled = wled;
+exports.MqttWled = mqttWled;
+exports.modLoader = modLoader;

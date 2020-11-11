@@ -1,0 +1,129 @@
+{
+  "popup": false,
+  "midi": true,
+  "trayBlinking": true,
+  "led": false,
+  "mqtt": true,
+  "mqttUrl": "tcp://10.9.9.224:1883",
+  "eventBindings": [
+    {
+      "type": "mqtt",
+      "topic": "ay-mbpro/mic/set",
+      "action": "mic.set",
+      "converter": "str2bool()"
+    },
+    {
+      "type": "mqtt",
+      "topic": "wled-05/g",
+      "action": "lpd8.pad('p8').setBlinking",
+      "converter": "str2bool(true)"
+    },
+    {
+      "type": "mqtt",
+      "topic": "wled-05/v",
+      "action": "wled('wled-05').onState"
+    },
+    {
+      "type": "lpd8",
+      "knob": "k5",
+      "converter": "exp3(100)",
+      "expr": "'A=' + Math.ceil(x*2.55)",
+      "action": "mqtt.topic('wled-05/api').send"
+    },
+    {
+      "type": "lpd8",
+      "knob": "k6",
+      "converter": "exp3(100)",
+      "expr": "JSON.parse('{\"seg\":[{},{\"bri\":' + Math.ceil(x*2.55) + ',\"sel\":false}]}')",
+      "action": "wled('wled-05').sendJson"
+    },
+    {
+      "type": "lpd8",
+      "knob": "k2",
+      "converter": "exp3(100)",
+      "expr": "JSON.parse('{\"seg\":[{\"bri\":' + Math.ceil(x*2.55) + ',\"sel\":true}]}')",
+      "actions": [
+        "wled('wled-05').sendJson",
+        "wled('wled-04').sendJson"
+      ]
+    },
+    {
+      "type": "lpd8",
+      "knob": "k4",
+      "converter": "exp3(100)",
+      "expr": "JSON.parse('{\"seg\":[{\"sx\":' + Math.ceil(x*2.55) + ',\"sel\":true}]}')",
+      "action": "wled('wled-05').sendJson"
+    },
+    {
+      "type": "lpd8",
+      "knob": "k8",
+      "converter": "exp3(100)",
+      "expr": "JSON.parse('{\"seg\":[{\"ix\":' + Math.ceil(x*2.55) + ',\"sel\":true}]}')",
+      "action": "wled('wled-05').sendJson"
+    },
+    {
+      "type": "lpd8",
+      "pad": "p8",
+      "action": "mqtt.topic('wled-05').send",
+      "converter": "bool2str('ON', 'OFF')"
+    },
+    {
+      "type": "lpd8",
+      "button": "p1",
+      "action": "mqtt.topic('clock-01/display/next').send"
+    },
+    {
+      "type": "lpd8",
+      "button": "p7",
+      "converter": "str('SS=0&SV=0&PL=~')",
+      "action": "mqtt.topic('wled-05/api').send"
+    },
+    {
+      "type": "lpd8",
+      "button": "p3",
+      "converter": "str('SS=0&PL=~-')",
+      "action": "mqtt.topic('wled-05/api').send"
+    },
+    {
+      "type": "lpd8",
+      "button": "p4",
+      "converter": "str('SS=0&SV=0&PL=2')",
+      "action": "mqtt.topic('wled-05/api').send"
+    },
+    {
+      "type": "lpd8",
+      "button": "p1",
+      "expr": "JSON.parse('{\"seg\":[{},{\"on\":true,\"sel\":false}]}')",
+      "action": "wled('wled-05').sendJson"
+    },
+    {
+      "type": "lpd8",
+      "button": "p2",
+      "expr": "JSON.parse('{\"seg\":[{\"on\":true,\"sel\":true,\"fx\":'+Math.ceil(Math.random()*101)+'}]}')",
+      "action": "wled('wled-05').sendJson"
+    },
+    {
+      "type": "lpd8",
+      "button": "p6",
+      "expr": "JSON.parse('{\"seg\":[{\"on\":true,\"sel\":true,\"pal\":2,\"col\":[['+Math.ceil(Math.random()*255)+','+Math.ceil(Math.random()*255)+','+Math.ceil(Math.random()*255)+']]}]}')",
+      "action": "wled('wled-05').sendJson"
+    }
+  ],
+  "modules": [
+    {
+      "path": "./mods/wled",
+      "config": {
+        "wleds": [
+          {
+            "name": "wled-05",
+            "address": "http://10.9.9.124"
+          },
+          {
+            "name": "wled-04",
+            "address": "http://10.9.9.117"
+          }
+        ]
+      }
+    }
+  ]
+}

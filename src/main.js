@@ -1,14 +1,17 @@
+const appInsights = require('applicationinsights');
+appInsights.setup('f9684b4f-65aa-4e8d-9f37-9c98886cd66d').start();
+
 const path = require('path')
 const { app, Tray, globalShortcut, Menu } = require('electron')
 const settings = require('electron-settings');
 
+const { actions, converters } = require("./actions")
 const { notifyUser } = require("./notifyUser")
 const { mic } = require('./mic')
 const { LPD8 } = require('./lpd8')
 const { TrayIcon, TrayBlinkingIcon } = require('./trayIcon')
 const { ledMatrix } = require('./ledMatrix')
 const { MqttNotifier } = require('./mqttNotifier')
-const { Wled } = require('./wled')
 
 const { SettingsController } = require('./controllers/settingsController');
 
@@ -23,38 +26,15 @@ const iconTrayMuted = new TrayIcon(iconTrayMutedPath)
 const iconTrayLive = new TrayIcon(iconTrayLivePath)
 const iconTrayLiveBlinking = new TrayBlinkingIcon(iconTrayLivePath, iconTrayLiveInvPath)
 
-const falseVals = ['off', '0', 'mute', 'muted', 'false', 'inactive', 'disabled', '-']
-const trueVals = ['on', '1', 'active', 'unmute', 'unmuted', 'true', 'enabled', 'onair', 'live', '+']
-
-let actions = {}
-
-/* jshint -W061 */
-let converters = {
-  bool2str: function(trueVal = "true", falseVal = "false") { return x => x ? trueVal : falseVal },
-  str2bool: function(defaultVal = false) {
-    return x => {
-      var v = String(x).toLowerCase().trim()
-      if (trueVals.indexOf(v) !== -1) return true;
-      else if (falseVals.indexOf(v) !== -1) return false;
-      return defaultVal;
-    }
-  },
-  num2bool: function() { return x => !!x && Number(x) > 0 },
-  multiply: function(num = 1) { return x => x * num },
-  exp: function(max) { return x => ((Math.sin(x * Math.PI/max - Math.PI/2) + 1) / 2) * max }, // [0..max] to be converted to [0..1] range and then back to [0..max]
-  exp3: function(max) { return x => ((Math.pow(Math.sin(x * Math.PI/max - Math.PI/2), 3) + 1) / 2) * max }, // [0..max] to be converted to [0..1] range and then back to [0..max]
-  str: function(x) { return () => String(x) },
-  num: function(x) { return () => Number(x) }
-}
-
-let notifications = {
+let config = {
   popup: true,
   midi: true,
   trayBlinking: true,
   led: true,
   mqtt: true,
   mqttUrl: 'tcp://10.9.9.224:1883',
-  eventBindings: []
+  eventBindings: [],
+  modules: []
 }
 
 let led = new ledMatrix('http://10.9.9.224:5000')
@@ -64,26 +44,26 @@ let tray = null
 
 function onMuted() {
   iconTrayMuted.set(tray)
-  if (notifications.midi && midi.isConnected()) midi.setOn()
-  if (notifications.popup) notifyUser("Mic is MUTED", 'Handle MIDI command', iconBallonMicMutedPath)
-  if (notifications.led) led.marqueeText('mute')
-  if (notifications.mqtt) mqttNotifier.notifyMuted()
+  if (config.midi && midi.isConnected()) midi.setOn()
+  if (config.popup) notifyUser("Mic is MUTED", 'Handle MIDI command', iconBallonMicMutedPath)
+  if (config.led) led.marqueeText('mute')
+  if (config.mqtt) mqttNotifier.notifyMuted()
 }
 
 function onUnmuted() {
-  if (notifications.trayBlinking) iconTrayLiveBlinking.set(tray)
+  if (config.trayBlinking) iconTrayLiveBlinking.set(tray)
   else iconTrayLive.set(tray)
 
-  if (notifications.midi && midi.isConnected()) midi.setBlinking()
-  if (notifications.popup) notifyUser("Mic is UNMUTED", 'Handle MIDI command', iconBallonLivePath)
-  if (notifications.led) led.setBlinkingText('LIVE')
-  if (notifications.mqtt) mqttNotifier.notifyUnmuted()
+  if (config.midi && midi.isConnected()) midi.setBlinking()
+  if (config.popup) notifyUser("Mic is UNMUTED", 'Handle MIDI command', iconBallonLivePath)
+  if (config.led) led.setBlinkingText('LIVE')
+  if (config.mqtt) mqttNotifier.notifyUnmuted()
 }
 
 function onVolumeChanged(vol) {
-  if (notifications.popup) notifyUser("Mic Volume " + vol + '%', 'Handle MIDI command', iconBallonLivePath)
-  if (notifications.led) led.setText(vol + '%', false, 1200).then(() => new Promise((resolve, _) => setTimeout(resolve, 1200))).then(() => led.setBlinkingText('LIVE'))
-  if (notifications.mqtt) mqttNotifier.notifyLevelChanged(vol)
+  if (config.popup) notifyUser("Mic Volume " + vol + '%', 'Handle MIDI command', iconBallonLivePath)
+  if (config.led) led.setText(vol + '%', false, 1200).then(() => new Promise((resolve, _) => setTimeout(resolve, 1200))).then(() => led.setBlinkingText('LIVE'))
+  if (config.mqtt) mqttNotifier.notifyLevelChanged(vol)
 }
 
 function mute() {
@@ -98,88 +78,95 @@ function toggleMute() {
   return mic.isMuted() ? unmute() : mute()
 }
 
-var sampleBindings = [
-  {
-    "type": "mqtt",
-    "topic": "ay-mbpro/mic/set",
-    "action": "mic.set",
-    "converter": "str2bool()"
-  },
-  {
-    "type": "mqtt",
-    "topic": "wled-05/g",
-    "action": "lpd8.pad('p8').setBlinking",
-    "converter": "str2bool(true)"
-  },
-  {
-    "type": "lpd8",
-    "pad": "p8",
-    "action": "mqtt.topic('wled-05').send",
-    "converter": "bool2str('ON', 'OFF')"
-  },
-  {
-    "type": "lpd8",
-    "knob": "k4",
-    "action": "mqtt.topic('wled-05').send",
-    "converter": "multiply(2)"
-  }
-]
-notifications.eventBindings = sampleBindings
-
-/* jshint -W061 */
-function evalToFunction(x) {
-  if (!!x)
-    try {
-      return eval(x);
-    }
-    catch (e) {
-      console.log(e);
-    }
-
-  return _ => _;
-}
-
-function getActionHandler(i) {
-  const func = eval(`actions.${i.action}`)
-  const convFunc = !!i.converter ? evalToFunction(`converters.${i.converter}`) : _ => _;
-  const exprFunc = !!i.expr ? evalToFunction(`(function(x) { return (${i.expr}); })`) : _ => _;
-  return func instanceof Function ? p => func(exprFunc(convFunc(p))) : () => {};
-}
-
 function reloadMqtt(url, bindings) {
   mqttNotifier.stop()
 
   if (!!bindings) bindings.forEach(v => { 
-    if (v.type === 'mqtt') mqttNotifier.on(v.topic, getActionHandler(v))
+    if (v.type === 'mqtt') mqttNotifier.on(v.topic, actions.getActionHandler(v))
   })
 
   mqttNotifier.connect(url)
 }
 
+const modsConfig = [
+  {
+    "path": "./Wled.js",
+    "config": { 
+      "wleds": [
+        {
+          "name": "wled-05",
+          "address": "http://10.9.9.124"
+        },
+        {
+          "name": "wled-04",
+          "address": "http://10.9.9.117"
+        }
+      ]
+    }
+  }
+]
+
+const eventBindingsConfig = [
+  {
+    "type": "mqtt",
+    "topic": "wled-05/v",
+    "action": "wled('wled-05').onState"
+  }
+]
+
+let runningMods = []
+function unloadMods(mods) {
+  if (!mods || !mods.length) return;
+
+}
+
+function loadMods(mods) {
+  if (!mods || !mods.length) return;
+  mods.forEach(m => {
+    try {
+      if (!runningMods[m.path]) {
+        runningMods[m.path] = require(m.path);
+      }
+
+      runningMods[m.path].modLoader(m.config, config, actions);
+    }
+    catch (e) {
+      console.log(e);
+    }
+  })
+}
+
 function reloadSettings() {
+  unloadMods(config.modules)
   loadSettings()
+  loadMods(config.modules)
   midi = new MidiConfig(LPD8('LPD8'))
-  reloadMqtt(notifications.mqttUrl, notifications.eventBindings)
-  if (midi.isConnected() && !notifications.midi) midi.setOff()
+  reloadMqtt(config.mqttUrl, config.eventBindings)
+  if (midi.isConnected() && !config.midi) midi.setOff()
   if (mic.isMuted()) onMuted()
   else onUnmuted()
 }
 
 function saveSettings(data) {
-  settings.setSync('notificationSettings', (data || notifications))
+  settings.setSync('notificationSettings', (data || config))
+  if (!!data) { // Restart after settings update as bindings currently cannot unsubscribe
+    app.relaunch()
+    return;
+  }
   reloadSettings()
 }
 
 function loadSettings() {
   var cfg = (settings.getSync('notificationSettings') || {})
 
-  notifications.led = cfg.led !== undefined ? cfg.led : true;
-  notifications.midi = cfg.midi !== undefined ? cfg.midi : true;
-  notifications.mqtt = cfg.mqtt !== undefined ? cfg.mqtt : true;
-  notifications.trayBlinking = cfg.trayBlinking !== undefined ? cfg.trayBlinking : true;
-  notifications.popup = cfg.popup !== undefined ? cfg.popup : false;
-  notifications.mqttUrl = cfg.mqttUrl !== undefined ? cfg.mqttUrl : 'tcp://10.9.9.224:1883';
-  notifications.eventBindings = cfg.eventBindings !== undefined ? cfg.eventBindings : [];
+  config.led = cfg.led !== undefined ? cfg.led : true;
+  config.midi = cfg.midi !== undefined ? cfg.midi : true;
+  config.mqtt = cfg.mqtt !== undefined ? cfg.mqtt : true;
+  config.trayBlinking = cfg.trayBlinking !== undefined ? cfg.trayBlinking : true;
+  config.popup = cfg.popup !== undefined ? cfg.popup : false;
+  config.mqttUrl = cfg.mqttUrl !== undefined ? cfg.mqttUrl : 'tcp://10.9.9.224:1883';
+  config.eventBindings = cfg.eventBindings !== undefined ? cfg.eventBindings : [];
+  config.modules = cfg.modules !== undefined ? cfg.modules : [];
 }
 
 function MidiConfig(lpd8) {
@@ -188,27 +175,27 @@ function MidiConfig(lpd8) {
   let padMute = lpd8.getPad('PAD5')
   let knobVol = lpd8.getKnob('K1')
 
-  padMute.onOn(() => { if (notifications.midi) mute() })
-  padMute.onOff(() => { if (notifications.midi) unmute() })
-  knobVol.onChange(val => { if (notifications.midi) mic.setDesiredVolume(val) })
+  padMute.onOn(() => { if (config.midi) mute() })
+  padMute.onOff(() => { if (config.midi) unmute() })
+  knobVol.onChange(val => { if (config.midi) mic.setDesiredVolume(val) })
 
   this.isConnected = () => true
   this.setOn = () => padMute.setOn()
   this.setOff = () => padMute.setOff()
   this.setBlinking = () => padMute.setBlinking()
 
-  notifications.eventBindings.forEach(v => {
+  config.eventBindings.forEach(v => {
     if (v.type === 'lpd8') {
       if (!!v.pad) {
         const p = lpd8.getPad(v.pad)
-        p.onOn(() => (getActionHandler(v))(true))
-        p.onOff(() => (getActionHandler(v))(false))
+        p.onOn(() => (actions.getActionHandler(v))(true))
+        p.onOff(() => (actions.getActionHandler(v))(false))
       }
       else if (!!v.button) {
         const p = lpd8.getPad(v.button)
         var btnTimeout = 0
         var handler = function() { 
-          (getActionHandler(v))(true);
+          (actions.getActionHandler(v))(true);
 
           if (btnTimeout) clearTimeout(btnTimeout);
           btnTimeout = setTimeout(() => { p.setOff(); btnTimeout = 0; }, 100); 
@@ -221,7 +208,7 @@ function MidiConfig(lpd8) {
         })
       }
       if (!!v.knob) {
-        lpd8.getKnob(v.knob).onChange(val => (getActionHandler(v))(val))
+        lpd8.getKnob(v.knob).onChange(val => (actions.getActionHandler(v))(val))
       }
     }
   })
@@ -242,37 +229,37 @@ MidiConfig.prototype.setBlinking = () => {}
 MidiConfig.prototype.isConnected = () => false
 
 function menuOnDisableNotifications(sender) {
-  notifications.popup = !sender.checked
+  config.popup = !sender.checked
   saveSettings()
 }
 
 function menuOnDisableMidi(sender) {
-  notifications.midi = !sender.checked
+  config.midi = !sender.checked
   saveSettings()
 }
 
 function menuOnDisableTrayBlinking(sender) {
-  notifications.trayBlinking = !sender.checked
+  config.trayBlinking = !sender.checked
   saveSettings()
 }
 
 function menuOnDisableLed(sender) {
   if (!sender.checked) led.clear()
 
-  notifications.led = !sender.checked
+  config.led = !sender.checked
   saveSettings()
 }
 
 function menuOnDisableMqtt(sender) {
-  notifications.mqtt = !sender.checked
-  if (notifications.mqtt) notifications.mqtt = mqttNotifier.reconnect()
+  config.mqtt = !sender.checked
+  if (config.mqtt) config.mqtt = mqttNotifier.reconnect()
   else mqttNotifier.stop()
 
   saveSettings()
 }
 
 function menuOnSettings() {
-  new SettingsController(notifications)
+  new SettingsController(config)
     .show(data => saveSettings(data));
 }
 
@@ -289,32 +276,32 @@ function createTrayMenu() {
     {
       type: 'checkbox',
       label: 'Disable Notifications',
-      checked: !notifications.popup,
+      checked: !config.popup,
       click: menuOnDisableNotifications
     },
     {
       type: 'checkbox',
       label: 'Disable MIDI',
-      checked: !notifications.midi || !midi.isConnected(),
+      checked: !config.midi || !midi.isConnected(),
       enabled: midi.isConnected(),
       click: menuOnDisableMidi
     },
     {
       type: 'checkbox',
       label: 'Disable Tray Blinking',
-      checked: !notifications.trayBlinking,
+      checked: !config.trayBlinking,
       click: menuOnDisableTrayBlinking
     },
     {
       type: 'checkbox',
       label: 'Disable Led',
-      checked: !notifications.led,
+      checked: !config.led,
       click: menuOnDisableLed
     },
     {
       type: 'checkbox',
       label: 'Disable MQTT',
-      checked: !notifications.mqtt,
+      checked: !config.mqtt,
       click: menuOnDisableMqtt
     },
     {
@@ -346,9 +333,9 @@ mic.onMuted(() => onMuted())
 mic.onUnmuted(() => onUnmuted())
 mic.onVolumeChanged(vol => onVolumeChanged(vol))
 
-mqttNotifier.onMuted(() => { if (notifications.mqtt) mute() })
-mqttNotifier.onUnmuted(() => { if (notifications.mqtt) unmute() })
-mqttNotifier.onLevel((val) => { if (notifications.mqtt) mic.setDesiredVolume(val) })
+mqttNotifier.onMuted(() => { if (config.mqtt) mute() })
+mqttNotifier.onUnmuted(() => { if (config.mqtt) unmute() })
+mqttNotifier.onLevel((val) => { if (config.mqtt) mic.setDesiredVolume(val) })
 
 actions.mic = {
   set: v => v ? unmute() : mute(),

@@ -8,12 +8,14 @@
   "repository": "https://github.com/alexrster/midi-listener-app",
   "main": "src/main.js",
   "scripts": {
-    "prestart": "gulp js.libs css.libs assets.libs",
-    "prepack": "gulp js.libs css.libs assets.libs",
+    "prestart": "npm run build",
+    "prepack": "npm run build",
+    "build": "gulp js.libs css.libs assets.libs",
     "start": "electron-forge start",
-    "test": "mocha",
+    "make": "electron-forge make",
     "package": "electron-forge package",
-    "make": "electron-forge make"
+    "publish": "electron-forge publish",
+    "test": "mocha"
   },
   "build": {
     "appId": "zone.qx.midilistener.app",
@@ -24,8 +26,15 @@
   },
   "config": {
     "forge": {
+      "electronPackagerConfig": {
+        "packageManager": "yarn"
+      },
       "packagerConfig": {
         "icon": "icon.icns"
+      },
+      "github_repository": {
+        "owner": "alexrster",
+        "name": "midi-listener-app"
       },
       "makers": [
         {
@@ -68,6 +77,7 @@
     "mochawesome": "^6.1.1"
   },
   "dependencies": {
+    "applicationinsights": "^1.8.8",
     "easymidi": "^2.0.1",
     "electron-settings": "^4.0.2",
     "electron-squirrel-startup": "^1.0.0",
@@ -77,6 +87,7 @@
     "he": "^1.2.0",
     "moment": "^2.29.1",
     "mqtt": "^4.2.1",
+    "update-electron-app": "^2.0.1",
     "util": "^0.12.3"
   }
 }
