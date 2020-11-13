@@ -24,6 +24,12 @@
       "action": "wled('wled-05').onState"
     },
     {
+      "type": "mqtt",
+      "topic": "balcony/keyboardLed",
+      "expr": "JSON.parse('{\"seg\":[{},{\"on\":true,\"sel\":false,\"pal\":2,\"col\":[['+Number.parseInt(x.substr(1,2), 16)+','+Number.parseInt(x.substr(3,2), 16)+','+Number.parseInt(x.substr(5,2), 16)+']]}]}')",
+      "action": "wled('wled-05').sendJson"
+    },
+    {
       "type": "lpd8",
       "knob": "k5",
       "converter": "exp3(100)",

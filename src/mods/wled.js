@@ -154,7 +154,10 @@ var wled = function(opts) {
 wled.prototype = Object.create(EventEmitter.prototype);
 
 var mqttWled = function(subscriberFunc) {
-  subscriberFunc(this.onState);
+  var self = this;
+  wled.apply(this);
+
+  subscriberFunc(data => self.onState(data));
 }
 
 mqttWled.prototype = Object.create(wled.prototype);
