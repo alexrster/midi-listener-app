@@ -26,6 +26,9 @@ const iconTrayMuted = new TrayIcon(iconTrayMutedPath)
 const iconTrayLive = new TrayIcon(iconTrayLivePath)
 const iconTrayLiveBlinking = new TrayBlinkingIcon(iconTrayLivePath, iconTrayLiveInvPath)
 
+// Hack to make electron-forge/electron-packager to include following files
+const WledMod = require('./mods/wled')
+
 let config = {
   popup: true,
   midi: true,

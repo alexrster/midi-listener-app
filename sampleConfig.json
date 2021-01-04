@@ -4,7 +4,7 @@
   "trayBlinking": true,
   "led": false,
   "mqtt": true,
-  "mqttUrl": "tcp://10.9.9.224:1883",
+  "mqttUrl": "tcp://10.9.9.96:1883",
   "eventBindings": [
     {
       "type": "mqtt",
@@ -17,6 +17,36 @@
       "topic": "wled-05/g",
       "action": "lpd8.pad('p8').setBlinking",
       "converter": "str2bool(true)"
+    },
+    {
+      "type": "mqtt",
+      "topic": "balcony/heater/top",
+      "action": "lpd8.pad('p2').setBlinking",
+      "converter": "str2bool()",
+      "state": "heater_top"
+    },
+    {
+      "type": "mqtt",
+      "topic": "balcony/heater/bottom",
+      "action": "lpd8.pad('p6').setBlinking",
+      "converter": "str2bool()",
+      "state": "heater_bottom"
+    },
+    {
+      "type": "lpd8",
+      "button": "p2",
+      "action": "mqtt.topic('balcony/heater/top/set').send",
+      "converter": "valueOf('heater_top')",
+      "expr": "!x",
+      "state": "heater_top"
+    },
+    {
+      "type": "lpd8",
+      "button": "p6",
+      "action": "mqtt.topic('balcony/heater/bottom/set').send",
+      "converter": "valueOf('heater_bottom')",
+      "expr": "!x",
+      "state": "heater_bottom"
     },
     {
       "type": "mqtt",
@@ -80,37 +110,19 @@
     },
     {
       "type": "lpd8",
-      "button": "p7",
-      "converter": "str('SS=0&SV=0&PL=~')",
-      "action": "mqtt.topic('wled-05/api').send"
-    },
-    {
-      "type": "lpd8",
-      "button": "p3",
-      "converter": "str('SS=0&PL=~-')",
-      "action": "mqtt.topic('wled-05/api').send"
-    },
-    {
-      "type": "lpd8",
-      "button": "p4",
-      "converter": "str('SS=0&SV=0&PL=2')",
-      "action": "mqtt.topic('wled-05/api').send"
-    },
-    {
-      "type": "lpd8",
       "button": "p1",
       "expr": "JSON.parse('{\"seg\":[{},{\"on\":true,\"sel\":false}]}')",
       "action": "wled('wled-05').sendJson"
     },
     {
       "type": "lpd8",
-      "button": "p2",
+      "button": "p3",
       "expr": "JSON.parse('{\"seg\":[{\"on\":true,\"sel\":true,\"fx\":'+Math.ceil(Math.random()*101)+'}]}')",
       "action": "wled('wled-05').sendJson"
     },
     {
       "type": "lpd8",
-      "button": "p6",
+      "button": "p7",
       "expr": "JSON.parse('{\"seg\":[{\"on\":true,\"sel\":true,\"pal\":2,\"col\":[['+Math.ceil(Math.random()*255)+','+Math.ceil(Math.random()*255)+','+Math.ceil(Math.random()*255)+']]}]}')",
       "action": "wled('wled-05').sendJson"
     }

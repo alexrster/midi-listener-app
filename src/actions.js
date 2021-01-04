@@ -2,6 +2,7 @@ const falseVals = ['off', '0', 'mute', 'muted', 'false', 'inactive', 'disabled',
 const trueVals = ['on', '1', 'active', 'unmute', 'unmuted', 'true', 'enabled', 'onair', 'live', '+']
 
 let actions = {}
+let state = {}
 
 /* jshint -W061 */
 function evalToFunction(x) {
@@ -20,8 +21,9 @@ function getSingleActionHandler(i) {
   const func = eval(`actions.${i.action}`)
   const convFunc = !!i.converter ? evalToFunction(`converters.${i.converter}`) : _ => _;
   const exprFunc = !!i.expr ? evalToFunction(`(function(x) { return ${i.expr}; })`) : _ => _;
+  const stateSaveFunc = !!i.state ? v => { state[i.state] = v; return v; } : _ => _;
   
-  return func instanceof Function ? p => func(exprFunc(convFunc(p))) : () => {};
+  return func instanceof Function ? p => func(stateSaveFunc(exprFunc(convFunc(p)))) : () => {};
 }
 
 function getSequenceActionHandler(i) {
@@ -82,7 +84,8 @@ let converters = {
   exp: function(max) { return x => ((Math.sin(x * Math.PI/max - Math.PI/2) + 1) / 2) * max }, // [0..max] to be converted to [0..1] range and then back to [0..max]
   exp3: function(max) { return x => ((Math.pow(Math.sin(x * Math.PI/max - Math.PI/2), 3) + 1) / 2) * max }, // [0..max] to be converted to [0..1] range and then back to [0..max]
   str: function(x) { return () => String(x) },
-  num: function(x) { return () => Number(x) }
+  num: function(x) { return () => Number(x) },
+  valueOf: function(x) { return () => state[x] }
 }
 
 exports.actions = actions
